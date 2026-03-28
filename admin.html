@@ -20,7 +20,7 @@
   <div class="wrap">
     <div class="card">
       <h1>管理画面</h1>
-      <div class="muted">履歴確認とCSV出力用の簡易ページです。CSVはExcelで列崩れしにくい形式に修正済みです。</div>
+      <div class="muted">履歴確認とCSV出力用の簡易ページです。Excelで列崩れ・空行が出にくい形式に修正済みです。</div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         <a class="btn" href="index.html">現場画面へ戻る</a>
         <button class="btn primary" id="csvBtn">CSV出力</button>
@@ -37,6 +37,14 @@
       try { return JSON.parse(localStorage.getItem("anchorBoltHistory") || "[]"); }
       catch { return []; }
     }
+
+    function sanitizeValue(v) {
+      return String(v ?? "")
+        .replace(/\r?\n/g, " ")
+        .replace(/"/g, '""')
+        .trim();
+    }
+
     function render() {
       const rows = loadRows();
       const wrap = document.getElementById("tableWrap");
@@ -47,24 +55,29 @@
             <tr><th>時刻</th><th>位置</th><th>柱種別</th><th>要求TYPE</th><th>読取TYPE</th><th>判定</th></tr>
           </thead>
           <tbody>
-            ${rows.map(r => `<tr><td>${r.time}</td><td>${r.pos}</td><td>${r.label}</td><td>${r.requiredType}</td><td>${r.scannedType}</td><td>${r.result === "ok" ? "適合" : "不一致"}</td></tr>`).join("")}
+            ${rows.map(r => `<tr><td>${sanitizeValue(r.time)}</td><td>${sanitizeValue(r.pos)}</td><td>${sanitizeValue(r.label)}</td><td>${sanitizeValue(r.requiredType)}</td><td>${sanitizeValue(r.scannedType)}</td><td>${r.result === "ok" ? "適合" : "不一致"}</td></tr>`).join("")}
           </tbody>
         </table>`;
     }
+
     function exportCsv() {
       const rows = loadRows();
       if (!rows.length) { alert("出力する履歴がありません。"); return; }
 
       const data = [
         ["時刻","位置","柱種別","要求TYPE","読取TYPE","判定"],
-        ...rows.map(r => [r.time, r.pos, r.label, r.requiredType, r.scannedType, r.result === "ok" ? "適合" : "不一致"])
+        ...rows.map(r => [
+          sanitizeValue(r.time),
+          sanitizeValue(r.pos),
+          sanitizeValue(r.label),
+          sanitizeValue(r.requiredType),
+          sanitizeValue(r.scannedType),
+          r.result === "ok" ? "適合" : "不一致"
+        ])
       ];
 
       const csv = data
-        .map(row => row.map(v => {
-          const s = String(v ?? "").replace(/"/g, '""');
-          return '"' + s + '"';
-        }).join(","))
+        .map(row => row.map(v => '"' + sanitizeValue(v) + '"').join(","))
         .join("\r\n");
 
       const blob = new Blob(["\ufeff" + csv], {type:"text/csv;charset=utf-8;"});
@@ -74,6 +87,7 @@
       a.click();
       URL.revokeObjectURL(a.href);
     }
+
     document.getElementById("csvBtn").addEventListener("click", exportCsv);
     document.getElementById("clearBtn").addEventListener("click", () => {
       if (!confirm("履歴を削除しますか？")) return;
