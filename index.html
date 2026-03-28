@@ -360,7 +360,7 @@
         return;
       }
       history.unshift({
-        time: new Date().toISOString().replace("T", " ").slice(0, 19),
+        time: new Date().toISOString().slice(0,19).replace("T"," "),
         pos: selected.id,
         label: selected.label,
         requiredType: selected.requiredType,
