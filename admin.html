@@ -15,15 +15,16 @@
     th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}
     .muted{color:#475569;font-size:13px}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>管理画面</h1>
-      <div class="muted">履歴確認とCSV出力用の簡易ページです。Excelで列崩れ・空行が出にくい形式に修正済みです。</div>
+      <div class="muted">CSVの空行問題を避けるため、Excel形式（.xlsx）で直接出力する版です。</div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         <a class="btn" href="index.html">現場画面へ戻る</a>
-        <button class="btn primary" id="csvBtn">CSV出力</button>
+        <button class="btn primary" id="xlsxBtn">Excel出力</button>
         <button class="btn" id="clearBtn">履歴クリア</button>
       </div>
     </div>
@@ -32,6 +33,7 @@
       <div id="tableWrap" class="muted">履歴はありません</div>
     </div>
   </div>
+
   <script>
     function loadRows() {
       try { return JSON.parse(localStorage.getItem("anchorBoltHistory") || "[]"); }
@@ -39,10 +41,7 @@
     }
 
     function sanitizeValue(v) {
-      return String(v ?? "")
-        .replace(/\r?\n/g, " ")
-        .replace(/"/g, '""')
-        .trim();
+      return String(v ?? "").replace(/[\r\n]+/g, " ").trim();
     }
 
     function render() {
@@ -60,9 +59,13 @@
         </table>`;
     }
 
-    function exportCsv() {
+    function exportXlsx() {
       const rows = loadRows();
       if (!rows.length) { alert("出力する履歴がありません。"); return; }
+      if (typeof XLSX === "undefined") {
+        alert("Excel出力ライブラリの読込に失敗しました。通信状態を確認して再読み込みしてください。");
+        return;
+      }
 
       const data = [
         ["時刻","位置","柱種別","要求TYPE","読取TYPE","判定"],
@@ -76,19 +79,23 @@
         ])
       ];
 
-      const csv = data
-        .map(row => row.map(v => '"' + sanitizeValue(v) + '"').join(","))
-        .join("\r\n");
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
 
-      const blob = new Blob(["\ufeff" + csv], {type:"text/csv;charset=utf-8;"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "anchor_bolt_history.csv";
-      a.click();
-      URL.revokeObjectURL(a.href);
+      ws["!cols"] = [
+        { wch: 22 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 10 }
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "判定履歴");
+      XLSX.writeFile(wb, "anchor_bolt_history.xlsx");
     }
 
-    document.getElementById("csvBtn").addEventListener("click", exportCsv);
+    document.getElementById("xlsxBtn").addEventListener("click", exportXlsx);
     document.getElementById("clearBtn").addEventListener("click", () => {
       if (!confirm("履歴を削除しますか？")) return;
       localStorage.removeItem("anchorBoltHistory");
