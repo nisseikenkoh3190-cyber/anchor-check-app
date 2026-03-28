@@ -20,7 +20,7 @@
   <div class="wrap">
     <div class="card">
       <h1>管理画面</h1>
-      <div class="muted">履歴確認とCSV出力用の簡易ページです。</div>
+      <div class="muted">履歴確認とCSV出力用の簡易ページです。CSVはExcelで列崩れしにくい形式に修正済みです。</div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         <a class="btn" href="index.html">現場画面へ戻る</a>
         <button class="btn primary" id="csvBtn">CSV出力</button>
@@ -56,9 +56,10 @@
       if (!rows.length) { alert("出力する履歴がありません。"); return; }
       const data = [["時刻","位置","柱種別","要求TYPE","読取TYPE","判定"], ...rows.map(r => [r.time,r.pos,r.label,r.requiredType,r.scannedType,r.result === "ok" ? "適合" : "不一致"])];
       const csv = data.map(row => row.map(v => {
-        const s = String(v ?? "");
-        return /[",\\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-      }).join(",")).join("\\n");
+        const s = String(v ?? "").replace(/"/g, '""');
+        return '"' + s + '"';
+      }).join(",")).join("
+");
       const blob = new Blob(["\\ufeff" + csv], {type:"text/csv;charset=utf-8;"});
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
