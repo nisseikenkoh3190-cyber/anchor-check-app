@@ -35,10 +35,10 @@
       border-radius:18px;overflow:hidden;min-height:320px
     }
     .plan-wrap{
-      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;overflow:hidden
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;overflow:hidden;touch-action:none
     }
     .plan-stage{
-      position:relative;flex:0 0 auto;touch-action:none
+      position:relative;flex:0 0 auto
     }
     .plan-img{
       display:block;width:100%;height:100%;object-fit:fill;user-select:none;
@@ -272,13 +272,13 @@
     function initPanzoom(){
       if (typeof Panzoom === "undefined") return;
       if (panzoom) return;
-      panzoom = Panzoom(planStage, {
+      panzoom = Panzoom(planWrap, {
         minScale: 1,
         maxScale: 4,
         startScale: 1
       });
-      planStage.addEventListener("panzoompan", () => { gestureMoved = true; });
-      planStage.addEventListener("panzoomzoom", () => { gestureMoved = true; });
+      planWrap.addEventListener("panzoompan", () => { gestureMoved = true; });
+      planWrap.addEventListener("panzoomzoom", () => { gestureMoved = true; });
     }
 
     function recoverPanzoomAfterCamera(){
@@ -291,7 +291,7 @@
       if (document.activeElement && typeof document.activeElement.blur === "function"){
         document.activeElement.blur();
       }
-      planStage.style.pointerEvents = "none";
+      planWrap.style.pointerEvents = "none";
       let frames = 0;
       const step = () => {
         frames += 1;
@@ -299,7 +299,7 @@
           panzoomRecoveryFrame = requestAnimationFrame(step);
           return;
         }
-        planStage.style.pointerEvents = "";
+        planWrap.style.pointerEvents = "";
         syncPlanViewport(true);
         renderAll();
         panzoomRecoveryFrame = null;
@@ -362,10 +362,11 @@
 
     function getPlanPointFromEvent(event){
       if (!planMetrics.width || !planMetrics.height) return null;
+      const wrapRect = planWrap.getBoundingClientRect();
       const stageRect = planStage.getBoundingClientRect();
       const scale = panzoom ? panzoom.getScale() : 1;
-      const localX = (event.clientX - stageRect.left) / scale;
-      const localY = (event.clientY - stageRect.top) / scale;
+      const localX = (event.clientX - wrapRect.left - (stageRect.left - wrapRect.left)) / scale;
+      const localY = (event.clientY - wrapRect.top - (stageRect.top - wrapRect.top)) / scale;
       return {
         x: localX / planMetrics.width,
         y: localY / planMetrics.height
