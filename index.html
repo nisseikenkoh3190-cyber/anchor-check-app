@@ -247,6 +247,7 @@
     let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
     let tapStart = null;
     let gestureMoved = false;
+    let panzoomRecoveryFrame = null;
     let panzoomRecoveryTimer = null;
 
     const planStage = document.getElementById("planStage");
@@ -290,17 +291,32 @@
     }
 
     function recoverPanzoomAfterCamera(){
+      if (panzoomRecoveryFrame){
+        cancelAnimationFrame(panzoomRecoveryFrame);
+        panzoomRecoveryFrame = null;
+      }
       if (panzoomRecoveryTimer){
         clearTimeout(panzoomRecoveryTimer);
+        panzoomRecoveryTimer = null;
       }
       gestureMoved = false;
       tapStart = null;
-      panzoomRecoveryTimer = setTimeout(() => {
-        initPanzoom();
-        syncPlanViewport(true);
-        renderAll();
-        panzoomRecoveryTimer = null;
-      }, 80);
+      let frames = 0;
+      const step = () => {
+        frames += 1;
+        if (frames < 3){
+          panzoomRecoveryFrame = requestAnimationFrame(step);
+          return;
+        }
+        panzoomRecoveryFrame = null;
+        panzoomRecoveryTimer = setTimeout(() => {
+          initPanzoom();
+          syncPlanViewport(true);
+          renderAll();
+          panzoomRecoveryTimer = null;
+        }, 20);
+      };
+      panzoomRecoveryFrame = requestAnimationFrame(step);
     }
 
     function parseQrValue(raw){
