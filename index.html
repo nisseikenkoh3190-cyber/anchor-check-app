@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>アンカーボルト照合アプリ 現場完成版</title>
+  <title>アンカーボルト照合アプリ 現場画面</title>
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --line:#cbd5e1; --text:#0f172a; --muted:#475569;
@@ -38,7 +38,7 @@
       position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;overflow:hidden;touch-action:none
     }
     .plan-content{
-      position:absolute;inset:8px;touch-action:none
+      position:absolute;inset:8px;touch-action:none;transform-origin:0 0
     }
     .plan-stage{
       position:absolute
@@ -118,13 +118,12 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
 </head>
 <body>
   <div class="app">
     <div class="topbar">
       <div>
-        <div class="title" id="pageTitle">アンカーボルト照合アプリ / 現場完成版</div>
+        <div class="title" id="pageTitle">アンカーボルト照合アプリ / 現場画面</div>
         <div class="meta" id="pageMeta">現場: サンプル現場A / 図面: 251210修正ハイベース設置図</div>
       </div>
       <a class="link-btn" id="adminLink" href="admin.html">管理画面</a>
@@ -159,14 +158,14 @@
     <div class="bottom-panel">
       <div class="stack">
         <div class="panel-title">読めない時の手動入力 / 再読取</div>
-        <input class="input" id="qrInput" placeholder="読めない時はここに手入力">
+        <input class="input" id="qrInput" placeholder="読めない時はここに手動入力">
         <div id="cameraStatus" class="status">待機中</div>
       </div>
 
       <div class="stack">
         <div class="panel-title">操作</div>
         <div class="toolbar">
-          <button class="btn primary" id="cameraOnBtn">再読取</button>
+          <button class="btn primary" id="cameraOnBtn">カメラ起動</button>
           <button class="btn" id="cameraOffBtn">カメラOFF</button>
           <button class="btn warn" id="saveBtn">記録</button>
         </div>
@@ -179,7 +178,7 @@
       <button class="camera-close" id="cameraCloseBtn">×</button>
       <video id="video" autoplay playsinline muted></video>
       <div class="scan-guide"></div>
-      <div class="camera-footer">QRを枠の中央に近づけてください</div>
+      <div class="camera-footer">QRを枠の中央に重ねてください</div>
     </div>
   </div>
 
@@ -243,14 +242,12 @@
     let history = [];
     let videoStream = null;
     let scanTimer = null;
-    let panzoom = null;
     let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
+    let viewTransform = { x: 0, y: 0, scale: 1 };
+    let gestureState = { mode: "idle", lastX: 0, lastY: 0, startScale: 1, startDistance: 0, startX: 0, startY: 0, startMidX: 0, startMidY: 0 };
     let tapStart = null;
     let gestureMoved = false;
     let panzoomRecoveryFrame = null;
-    let activeTouchCount = 0;
-    let pinchActive = false;
-    const activePointerIds = new Set();
 
     const planViewport = document.getElementById("planViewport");
     const planContent = document.getElementById("planContent");
@@ -270,24 +267,25 @@
     const canvas = document.getElementById("qrCanvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-    function applyCurrentSite(){
-      document.title = `アンカーボルト照合アプリ ${currentSite.title}`;
-      pageTitle.textContent = `アンカーボルト照合アプリ / ${currentSite.title}`;
-      pageMeta.textContent = `現場: ${currentSite.siteName} / 図面: ${currentSite.drawingName}`;
-      planImage.src = currentSite.image;
-      adminLink.href = `admin.html?TITLE=${encodeURIComponent(currentTitle)}`;
+
+    function applyContentTransform(){
+      planContent.style.transform = `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`;
     }
 
-    function initPanzoom(){
-      if (typeof Panzoom === "undefined") return;
-      if (panzoom) return;
-      panzoom = Panzoom(planContent, {
-        minScale: 1,
-        maxScale: 4,
-        startScale: 1
-      });
-      planContent.addEventListener("panzoompan", () => { gestureMoved = true; });
-      planContent.addEventListener("panzoomzoom", () => { gestureMoved = true; });
+    function resetViewTransform(){
+      viewTransform = { x: 0, y: 0, scale: 1 };
+      applyContentTransform();
+    }
+
+    function loadSite(site){
+      selected = null;
+      document.title = `アンカーボルト照合アプリ ${site.title}`;
+      pageTitle.textContent = `アンカーボルト照合アプリ / ${site.title}`;
+      pageMeta.textContent = `現場: ${site.siteName} / 図面: ${site.drawingName}`;
+      planImage.src = site.image;
+      adminLink.href = `admin.html?TITLE=${encodeURIComponent(site.title)}`;
+      resetViewTransform();
+      resetGestureTracking();
     }
 
     function recoverPanzoomAfterCamera(){
@@ -295,8 +293,7 @@
         cancelAnimationFrame(panzoomRecoveryFrame);
         panzoomRecoveryFrame = null;
       }
-      gestureMoved = false;
-      tapStart = null;
+      resetGestureTracking();
       if (document.activeElement && typeof document.activeElement.blur === "function"){
         document.activeElement.blur();
       }
@@ -319,9 +316,7 @@
     function resetGestureTracking(){
       tapStart = null;
       gestureMoved = false;
-      pinchActive = false;
-      activeTouchCount = 0;
-      activePointerIds.clear();
+      gestureState = { mode: "idle", lastX: 0, lastY: 0, startScale: 1, startDistance: 0, startX: 0, startY: 0, startMidX: 0, startMidY: 0 };
     }
 
     function flushPlanInputState(){
@@ -335,6 +330,23 @@
         planContent.style.pointerEvents = "";
         panzoomRecoveryFrame = null;
       });
+    }
+
+    function getTouchDistance(touches){
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    }
+
+    function getTouchMidpoint(touches){
+      return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2
+      };
+    }
+
+    function clampScale(scale){
+      return Math.max(1, Math.min(4, scale));
     }
 
     function parseQrValue(raw){
@@ -385,20 +397,14 @@
       planStage.style.top = `${(planContent.clientHeight - planMetrics.height) / 2}px`;
       planStage.style.width = `${planMetrics.width}px`;
       planStage.style.height = `${planMetrics.height}px`;
-      if (panzoom && reset){
-        panzoom.reset({ animate: false, force: true });
-        panzoom.pan(0, 0, { animate: false, force: true });
-        panzoom.zoom(1, { animate: false, force: true });
-      }
+      if (reset) resetViewTransform();
     }
 
     function getPlanPointFromEvent(event){
       if (!planMetrics.width || !planMetrics.height) return null;
-      const contentRect = planContent.getBoundingClientRect();
       const stageRect = planStage.getBoundingClientRect();
-      const scale = panzoom ? panzoom.getScale() : 1;
-      const localX = (event.clientX - contentRect.left - (stageRect.left - contentRect.left)) / scale;
-      const localY = (event.clientY - contentRect.top - (stageRect.top - contentRect.top)) / scale;
+      const localX = (event.clientX - stageRect.left) * (planMetrics.width / stageRect.width);
+      const localY = (event.clientY - stageRect.top) * (planMetrics.height / stageRect.height);
       return {
         x: localX / planMetrics.width,
         y: localY / planMetrics.height
@@ -407,12 +413,12 @@
 
     function findNearestPosition(point){
       if (!point) return null;
-      const scale = panzoom ? panzoom.getScale() : 1;
+      const stageRect = planStage.getBoundingClientRect();
       let nearest = null;
       let nearestDistance = Infinity;
       currentSite.positions.forEach(pos => {
-        const dx = (point.x - pos.x) * planMetrics.width * scale;
-        const dy = (point.y - pos.y) * planMetrics.height * scale;
+        const dx = (point.x - pos.x) * stageRect.width;
+        const dy = (point.y - pos.y) * stageRect.height;
         const distance = Math.hypot(dx, dy);
         if (distance < nearestDistance){
           nearest = pos;
@@ -477,11 +483,11 @@
       }
       if (result === "ok"){
         resultBox.className = "result-box ok";
-        resultBox.innerHTML = `<div class="result-state">適合</div><div class="result-detail">要求: ${selected.requiredType}<br>読取: ${parsed}</div>`;
+        resultBox.innerHTML = `<div class="result-state">適合</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
         if (navigator.vibrate) navigator.vibrate(60);
       } else {
         resultBox.className = "result-box ng";
-        resultBox.innerHTML = `<div class="result-state">不一致</div><div class="result-detail">要求: ${selected.requiredType}<br>読取: ${parsed}</div>`;
+        resultBox.innerHTML = `<div class="result-state">不一致</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
         if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
       }
     }
@@ -571,31 +577,25 @@
       }
     }
 
+    function initializeApp(){
+      loadSite(currentSite);
+      loadHistory();
+      syncPlanViewport(true);
+      renderAll();
+    }
+
     document.getElementById("cameraOnBtn").addEventListener("click", startCamera);
     document.getElementById("cameraOffBtn").addEventListener("click", stopCamera);
     document.getElementById("cameraCloseBtn").addEventListener("click", stopCamera);
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
     qrInput.addEventListener("input", renderResult);
 
-    initPanzoom();
     planStage.addEventListener("pointerdown", event => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
-      activePointerIds.add(event.pointerId);
-      if (activePointerIds.size > 1){
-        pinchActive = true;
-        tapStart = null;
-        gestureMoved = true;
-        return;
-      }
       tapStart = { x: event.clientX, y: event.clientY };
       gestureMoved = false;
     });
     planStage.addEventListener("pointerup", async event => {
-      activePointerIds.delete(event.pointerId);
-      if (pinchActive){
-        if (activePointerIds.size <= 1) flushPlanInputState();
-        return;
-      }
       if (!tapStart || event.target.closest(".marker")) return;
       const moveDistance = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
       const isTap = moveDistance < 10 && !gestureMoved;
@@ -604,26 +604,57 @@
       const nearest = findNearestPosition(getPlanPointFromEvent(event));
       if (nearest) await selectPosition(nearest);
     });
-    planStage.addEventListener("pointercancel", event => {
-      activePointerIds.delete(event.pointerId);
-      if (pinchActive || activePointerIds.size === 0) flushPlanInputState();
-      else tapStart = null;
-    });
+    planStage.addEventListener("pointercancel", () => { tapStart = null; });
     planContent.addEventListener("touchstart", event => {
-      activeTouchCount = event.touches.length;
-      if (activeTouchCount > 1){
-        pinchActive = true;
+      if (event.touches.length === 1){
+        const touch = event.touches[0];
+        gestureState = { ...gestureState, mode: "drag", lastX: touch.clientX, lastY: touch.clientY };
+      } else if (event.touches.length === 2){
+        const midpoint = getTouchMidpoint(event.touches);
+        gestureState = {
+          ...gestureState,
+          mode: "pinch",
+          startScale: viewTransform.scale,
+          startDistance: getTouchDistance(event.touches),
+          startX: viewTransform.x,
+          startY: viewTransform.y,
+          startMidX: midpoint.x,
+          startMidY: midpoint.y
+        };
         tapStart = null;
         gestureMoved = true;
       }
     }, { passive: true });
-    planContent.addEventListener("touchend", event => {
-      activeTouchCount = event.touches.length;
-      if (pinchActive && activeTouchCount <= 1) flushPlanInputState();
-      else if (activeTouchCount === 0) resetGestureTracking();
+    planContent.addEventListener("touchmove", event => {
+      if (gestureState.mode === "drag" && event.touches.length === 1){
+        const touch = event.touches[0];
+        const dx = touch.clientX - gestureState.lastX;
+        const dy = touch.clientY - gestureState.lastY;
+        viewTransform.x += dx;
+        viewTransform.y += dy;
+        gestureState.lastX = touch.clientX;
+        gestureState.lastY = touch.clientY;
+        gestureMoved = true;
+        applyContentTransform();
+        event.preventDefault();
+      } else if (gestureState.mode === "pinch" && event.touches.length === 2){
+        const midpoint = getTouchMidpoint(event.touches);
+        const nextScale = clampScale(gestureState.startScale * (getTouchDistance(event.touches) / Math.max(gestureState.startDistance, 1)));
+        const anchorX = (gestureState.startMidX - gestureState.startX) / gestureState.startScale;
+        const anchorY = (gestureState.startMidY - gestureState.startY) / gestureState.startScale;
+        viewTransform.scale = nextScale;
+        viewTransform.x = midpoint.x - anchorX * nextScale;
+        viewTransform.y = midpoint.y - anchorY * nextScale;
+        gestureMoved = true;
+        applyContentTransform();
+        event.preventDefault();
+      }
+    }, { passive: false });
+    planContent.addEventListener("touchend", () => {
+      resetGestureTracking();
     }, { passive: true });
     planContent.addEventListener("touchcancel", () => {
-      flushPlanInputState();
+      resetGestureTracking();
     }, { passive: true });
     planImage.addEventListener("load", () => {
       syncPlanViewport(true);
@@ -633,10 +664,7 @@
       syncPlanViewport(true);
       renderAll();
     });
-    applyCurrentSite();
-    loadHistory();
-    syncPlanViewport(true);
-    renderAll();
+    initializeApp();
   </script>
 </body>
 </html>
