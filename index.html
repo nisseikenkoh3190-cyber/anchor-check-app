@@ -248,7 +248,6 @@
     let tapStart = null;
     let gestureMoved = false;
     let panzoomRecoveryFrame = null;
-    let panzoomRecoveryTimer = null;
 
     const planStage = document.getElementById("planStage");
     const planPanzoom = document.getElementById("planPanzoom");
@@ -277,10 +276,7 @@
 
     function initPanzoom(){
       if (typeof Panzoom === "undefined") return;
-      if (panzoom){
-        panzoom.destroy();
-        panzoom = null;
-      }
+      if (panzoom) return;
       panzoom = Panzoom(planPanzoom, {
         minScale: 1,
         maxScale: 4,
@@ -295,12 +291,12 @@
         cancelAnimationFrame(panzoomRecoveryFrame);
         panzoomRecoveryFrame = null;
       }
-      if (panzoomRecoveryTimer){
-        clearTimeout(panzoomRecoveryTimer);
-        panzoomRecoveryTimer = null;
-      }
       gestureMoved = false;
       tapStart = null;
+      if (document.activeElement && typeof document.activeElement.blur === "function"){
+        document.activeElement.blur();
+      }
+      planStage.style.pointerEvents = "none";
       let frames = 0;
       const step = () => {
         frames += 1;
@@ -308,13 +304,10 @@
           panzoomRecoveryFrame = requestAnimationFrame(step);
           return;
         }
+        planStage.style.pointerEvents = "";
+        syncPlanViewport(true);
+        renderAll();
         panzoomRecoveryFrame = null;
-        panzoomRecoveryTimer = setTimeout(() => {
-          initPanzoom();
-          syncPlanViewport(true);
-          renderAll();
-          panzoomRecoveryTimer = null;
-        }, 20);
       };
       panzoomRecoveryFrame = requestAnimationFrame(step);
     }
