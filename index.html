@@ -247,6 +247,7 @@
     let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
     let tapStart = null;
     let gestureMoved = false;
+    let panzoomRecoveryTimer = null;
 
     const planStage = document.getElementById("planStage");
     const planPanzoom = document.getElementById("planPanzoom");
@@ -275,6 +276,10 @@
 
     function initPanzoom(){
       if (typeof Panzoom === "undefined") return;
+      if (panzoom){
+        panzoom.destroy();
+        panzoom = null;
+      }
       panzoom = Panzoom(planPanzoom, {
         minScale: 1,
         maxScale: 4,
@@ -282,6 +287,20 @@
       });
       planPanzoom.addEventListener("panzoompan", () => { gestureMoved = true; });
       planPanzoom.addEventListener("panzoomzoom", () => { gestureMoved = true; });
+    }
+
+    function recoverPanzoomAfterCamera(){
+      if (panzoomRecoveryTimer){
+        clearTimeout(panzoomRecoveryTimer);
+      }
+      gestureMoved = false;
+      tapStart = null;
+      panzoomRecoveryTimer = setTimeout(() => {
+        initPanzoom();
+        syncPlanViewport(true);
+        renderAll();
+        panzoomRecoveryTimer = null;
+      }, 80);
     }
 
     function parseQrValue(raw){
@@ -448,10 +467,7 @@
       video.srcObject = null;
       cameraWrap.style.display = "none";
       cameraStatus.textContent = "待機中";
-      requestAnimationFrame(() => {
-        syncPlanViewport(true);
-        renderAll();
-      });
+      recoverPanzoomAfterCamera();
     }
 
     async function startCamera(){
