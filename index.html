@@ -248,6 +248,9 @@
     let tapStart = null;
     let gestureMoved = false;
     let panzoomRecoveryFrame = null;
+    let activeTouchCount = 0;
+    let pinchActive = false;
+    const activePointerIds = new Set();
 
     const planViewport = document.getElementById("planViewport");
     const planContent = document.getElementById("planContent");
@@ -311,6 +314,27 @@
         panzoomRecoveryFrame = null;
       };
       panzoomRecoveryFrame = requestAnimationFrame(step);
+    }
+
+    function resetGestureTracking(){
+      tapStart = null;
+      gestureMoved = false;
+      pinchActive = false;
+      activeTouchCount = 0;
+      activePointerIds.clear();
+    }
+
+    function flushPlanInputState(){
+      if (panzoomRecoveryFrame){
+        cancelAnimationFrame(panzoomRecoveryFrame);
+        panzoomRecoveryFrame = null;
+      }
+      resetGestureTracking();
+      planContent.style.pointerEvents = "none";
+      panzoomRecoveryFrame = requestAnimationFrame(() => {
+        planContent.style.pointerEvents = "";
+        panzoomRecoveryFrame = null;
+      });
     }
 
     function parseQrValue(raw){
@@ -556,10 +580,22 @@
     initPanzoom();
     planStage.addEventListener("pointerdown", event => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
+      activePointerIds.add(event.pointerId);
+      if (activePointerIds.size > 1){
+        pinchActive = true;
+        tapStart = null;
+        gestureMoved = true;
+        return;
+      }
       tapStart = { x: event.clientX, y: event.clientY };
       gestureMoved = false;
     });
     planStage.addEventListener("pointerup", async event => {
+      activePointerIds.delete(event.pointerId);
+      if (pinchActive){
+        if (activePointerIds.size <= 1) flushPlanInputState();
+        return;
+      }
       if (!tapStart || event.target.closest(".marker")) return;
       const moveDistance = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
       const isTap = moveDistance < 10 && !gestureMoved;
@@ -568,7 +604,27 @@
       const nearest = findNearestPosition(getPlanPointFromEvent(event));
       if (nearest) await selectPosition(nearest);
     });
-    planStage.addEventListener("pointercancel", () => { tapStart = null; });
+    planStage.addEventListener("pointercancel", event => {
+      activePointerIds.delete(event.pointerId);
+      if (pinchActive || activePointerIds.size === 0) flushPlanInputState();
+      else tapStart = null;
+    });
+    planContent.addEventListener("touchstart", event => {
+      activeTouchCount = event.touches.length;
+      if (activeTouchCount > 1){
+        pinchActive = true;
+        tapStart = null;
+        gestureMoved = true;
+      }
+    }, { passive: true });
+    planContent.addEventListener("touchend", event => {
+      activeTouchCount = event.touches.length;
+      if (pinchActive && activeTouchCount <= 1) flushPlanInputState();
+      else if (activeTouchCount === 0) resetGestureTracking();
+    }, { passive: true });
+    planContent.addEventListener("touchcancel", () => {
+      flushPlanInputState();
+    }, { passive: true });
     planImage.addEventListener("load", () => {
       syncPlanViewport(true);
       renderAll();
