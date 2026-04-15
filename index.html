@@ -38,13 +38,20 @@
       position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;padding:8px
     }
     .plan-stage{
-      position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center
+      position:relative;width:100%;height:100%;overflow:hidden;touch-action:none
     }
-    .plan-img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+    .plan-panzoom{
+      position:absolute;left:0;top:0;transform-origin:0 0;touch-action:none
+    }
+    .plan-img{
+      display:block;width:100%;height:100%;object-fit:fill;user-select:none;
+      -webkit-user-drag:none;pointer-events:none
+    }
+    .marker-layer{position:absolute;inset:0;pointer-events:none}
     .marker{
       position:absolute;width:24px;height:24px;transform:translate(-50%,-50%);
       border-radius:999px;border:3px solid #b45309;background:rgba(245,158,11,.22);
-      box-shadow:0 1px 6px rgba(0,0,0,.12);cursor:pointer
+      box-shadow:0 1px 6px rgba(0,0,0,.12);cursor:pointer;pointer-events:auto;touch-action:manipulation
     }
     .marker.active{
       width:30px;height:30px;border-color:#0369a1;background:rgba(14,165,233,.30);
@@ -111,6 +118,7 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -125,7 +133,10 @@
     <div class="plan-card">
       <div class="plan-wrap">
         <div class="plan-stage" id="planStage">
-          <img class="plan-img" id="planImage" alt="KEY PLAN">
+          <div class="plan-panzoom" id="planPanzoom">
+            <img class="plan-img" id="planImage" alt="KEY PLAN">
+            <div class="marker-layer" id="markerLayer"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -232,9 +243,15 @@
     let history = [];
     let videoStream = null;
     let scanTimer = null;
+    let panzoom = null;
+    let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
+    let tapStart = null;
+    let gestureMoved = false;
 
     const planStage = document.getElementById("planStage");
+    const planPanzoom = document.getElementById("planPanzoom");
     const planImage = document.getElementById("planImage");
+    const markerLayer = document.getElementById("markerLayer");
     const pageTitle = document.getElementById("pageTitle");
     const pageMeta = document.getElementById("pageMeta");
     const adminLink = document.getElementById("adminLink");
@@ -256,6 +273,18 @@
       adminLink.href = `admin.html?TITLE=${encodeURIComponent(currentTitle)}`;
     }
 
+    function initPanzoom(){
+      if (typeof Panzoom === "undefined") return;
+      panzoom = Panzoom(planPanzoom, {
+        minScale: 1,
+        maxScale: 4,
+        startScale: 1,
+        contain: "outside"
+      });
+      planPanzoom.addEventListener("panzoompan", () => { gestureMoved = true; });
+      planPanzoom.addEventListener("panzoomzoom", () => { gestureMoved = true; });
+    }
+
     function parseQrValue(raw){
       if (!raw) return "";
       const text = raw.trim().toUpperCase();
@@ -273,34 +302,95 @@
       return parsed === selected.requiredType ? "ok" : "ng";
     }
 
-    function getImageRect(){
-      const stageRect = planStage.getBoundingClientRect();
-      const imgRect = planImage.getBoundingClientRect();
+    function getBaseImageRect(){
+      const stageWidth = planStage.clientWidth;
+      const stageHeight = planStage.clientHeight;
+      const naturalWidth = planImage.naturalWidth || 1;
+      const naturalHeight = planImage.naturalHeight || 1;
+      const imageRatio = naturalWidth / naturalHeight;
+      const stageRatio = stageWidth / stageHeight;
+
+      let width = stageWidth;
+      let height = stageHeight;
+
+      if (imageRatio > stageRatio){
+        height = width / imageRatio;
+      } else {
+        width = height * imageRatio;
+      }
+
       return {
-        left: imgRect.left - stageRect.left,
-        top: imgRect.top - stageRect.top,
-        width: imgRect.width,
-        height: imgRect.height
+        left: (stageWidth - width) / 2,
+        top: (stageHeight - height) / 2,
+        width,
+        height
       };
     }
 
-    function renderMarkers(){
-      [...planStage.querySelectorAll(".marker, .marker-label")].forEach(el => el.remove());
-      const r = getImageRect();
-      if (!r.width || !r.height) return;
+    function syncPlanViewport(reset = false){
+      planMetrics = getBaseImageRect();
+      planPanzoom.style.left = `${planMetrics.left}px`;
+      planPanzoom.style.top = `${planMetrics.top}px`;
+      planPanzoom.style.width = `${planMetrics.width}px`;
+      planPanzoom.style.height = `${planMetrics.height}px`;
+      if (panzoom && reset){
+        panzoom.reset({ animate: false, force: true });
+      }
+    }
+
+    function getPlanPointFromEvent(event){
+      if (!planMetrics.width || !planMetrics.height) return null;
+      const stageRect = planStage.getBoundingClientRect();
+      const pan = panzoom ? panzoom.getPan() : { x: 0, y: 0 };
+      const scale = panzoom ? panzoom.getScale() : 1;
+      const localX = (event.clientX - stageRect.left - planMetrics.left - pan.x) / scale;
+      const localY = (event.clientY - stageRect.top - planMetrics.top - pan.y) / scale;
+      return {
+        x: localX / planMetrics.width,
+        y: localY / planMetrics.height
+      };
+    }
+
+    function findNearestPosition(point){
+      if (!point) return null;
+      const scale = panzoom ? panzoom.getScale() : 1;
+      let nearest = null;
+      let nearestDistance = Infinity;
       currentSite.positions.forEach(pos => {
-        const left = r.left + r.width * pos.x;
-        const top = r.top + r.height * pos.y;
+        const dx = (point.x - pos.x) * planMetrics.width * scale;
+        const dy = (point.y - pos.y) * planMetrics.height * scale;
+        const distance = Math.hypot(dx, dy);
+        if (distance < nearestDistance){
+          nearest = pos;
+          nearestDistance = distance;
+        }
+      });
+      return nearestDistance <= 32 ? nearest : null;
+    }
+
+    async function selectPosition(pos){
+      if (!pos) return;
+      selected = pos;
+      renderAll();
+      await startCamera();
+    }
+
+    function renderMarkers(){
+      markerLayer.innerHTML = "";
+      if (!planMetrics.width || !planMetrics.height) return;
+      currentSite.positions.forEach(pos => {
+        const left = planMetrics.width * pos.x;
+        const top = planMetrics.height * pos.y;
 
         const marker = document.createElement("button");
         marker.className = "marker" + (selected && selected.id === pos.id ? " active" : "");
         marker.style.left = left + "px";
         marker.style.top = top + "px";
+        marker.type = "button";
         marker.onclick = async () => {
-          selected = pos;
-          renderAll();
-          await startCamera();
+          await selectPosition(pos);
         };
+        marker.addEventListener("pointerup", event => event.stopPropagation());
 
         const label = document.createElement("div");
         label.className = "marker-label";
@@ -308,8 +398,8 @@
         label.style.top = top + "px";
         label.textContent = pos.label;
 
-        planStage.appendChild(marker);
-        planStage.appendChild(label);
+        markerLayer.appendChild(marker);
+        markerLayer.appendChild(label);
       });
     }
 
@@ -432,11 +522,33 @@
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
     qrInput.addEventListener("input", renderResult);
 
-    planImage.addEventListener("load", renderAll);
-    window.addEventListener("resize", renderMarkers);
-
+    initPanzoom();
+    planStage.addEventListener("pointerdown", event => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      tapStart = { x: event.clientX, y: event.clientY };
+      gestureMoved = false;
+    });
+    planStage.addEventListener("pointerup", async event => {
+      if (!tapStart || event.target.closest(".marker")) return;
+      const moveDistance = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
+      const isTap = moveDistance < 10 && !gestureMoved;
+      tapStart = null;
+      if (!isTap) return;
+      const nearest = findNearestPosition(getPlanPointFromEvent(event));
+      if (nearest) await selectPosition(nearest);
+    });
+    planStage.addEventListener("pointercancel", () => { tapStart = null; });
+    planImage.addEventListener("load", () => {
+      syncPlanViewport(true);
+      renderAll();
+    });
+    window.addEventListener("resize", () => {
+      syncPlanViewport(true);
+      renderAll();
+    });
     applyCurrentSite();
     loadHistory();
+    syncPlanViewport(true);
     renderAll();
   </script>
 </body>
