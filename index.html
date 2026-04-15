@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -65,8 +65,13 @@
     .info-row{display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
     .panel-title{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .selected-main{font-size:22px;font-weight:800;line-height:1.2}
-    .selected-sub{font-size:14px;color:var(--muted);margin-top:4px}
+    .selected-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .selected-info{min-width:0;flex:1}
+    .selected-main{font-size:22px;font-weight:800;line-height:1.2;word-break:break-word}
+    .selected-sub{font-size:14px;color:var(--muted);margin-top:4px;min-height:18px;word-break:break-word}
+    .btn.inline{
+      width:auto;min-width:88px;min-height:44px;padding:0 14px;flex:0 0 auto
+    }
     .result-box{
       border-radius:16px;min-height:110px;display:flex;flex-direction:column;justify-content:center;
       padding:12px 14px;border:1px solid var(--line);background:#f8fafc
@@ -80,6 +85,7 @@
       display:grid;grid-template-columns:1.1fr .85fr;gap:10px
     }
     .stack{display:grid;gap:8px}
+    .stack.compact{align-content:start}
     .toolbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
     .btn,.input{
       width:100%;min-height:52px;border-radius:14px;border:1px solid var(--line);font-size:16px
@@ -87,8 +93,57 @@
     .btn{background:#fff;color:var(--text);font-weight:700;cursor:pointer}
     .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
     .btn.warn{background:#fff7ed;border-color:#fdba74}
+    .btn.danger{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
     .input{padding:12px 14px}
     .status{font-size:13px;color:var(--muted);line-height:1.4}
+    .history-card{
+      background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px
+    }
+    .history-head{
+      display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap
+    }
+    .history-actions{
+      display:flex;gap:8px;flex-wrap:wrap
+    }
+    .history-count{
+      font-size:12px;color:var(--muted)
+    }
+    .history-panel{
+      display:none;gap:8px
+    }
+    .history-panel.open{
+      display:grid
+    }
+    .history-empty{
+      border:1px dashed var(--line);border-radius:14px;padding:16px;font-size:14px;color:var(--muted);background:#f8fafc
+    }
+    .history-list{
+      display:grid;gap:8px
+    }
+    .history-item{
+      border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;display:grid;gap:8px
+    }
+    .history-item-top{
+      display:flex;align-items:center;justify-content:space-between;gap:8px
+    }
+    .history-item-main{
+      font-size:15px;font-weight:700
+    }
+    .history-item-time{
+      font-size:12px;color:var(--muted)
+    }
+    .history-item-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px
+    }
+    .history-label{
+      color:var(--muted);margin-bottom:2px
+    }
+    .badge{
+      display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:28px;
+      border-radius:999px;padding:0 10px;font-size:12px;font-weight:800;border:1px solid transparent
+    }
+    .badge.ok{background:var(--okbg);border-color:var(--ok);color:#047857}
+    .badge.ng{background:var(--ngbg);border-color:var(--ng);color:#b91c1c}
     .camera-wrap{
       position:fixed;inset:0;background:rgba(15,23,42,.72);display:none;align-items:center;justify-content:center;
       z-index:999;padding:20px
@@ -124,9 +179,8 @@
     <div class="topbar">
       <div>
         <div class="title" id="pageTitle">アンカーボルト照合アプリ / 現場画面</div>
-        <div class="meta" id="pageMeta">現場: サンプル現場A / 図面: 251210修正ハイベース設置図</div>
+        <div class="meta" id="pageMeta">現場: サンプル現場A / 図面: 251210基礎ハイベース設置図</div>
       </div>
-      <a class="link-btn" id="adminLink" href="admin.html">管理画面</a>
     </div>
 
     <div class="plan-card">
@@ -142,33 +196,53 @@
 
     <div class="info-row">
       <div class="panel">
-        <div class="panel-title">選択位置</div>
-        <div id="selectedMain" class="selected-main">未選択</div>
-        <div id="selectedSub" class="selected-sub">KEY PLAN上の柱をタップすると自動でカメラ起動</div>
+        <div class="selected-row">
+          <div class="selected-info">
+            <div id="selectedMain" class="selected-main">未選択</div>
+            <div id="selectedSub" class="selected-sub"></div>
+          </div>
+          <button class="btn warn inline" id="saveBtn" type="button">保存</button>
+        </div>
       </div>
       <div class="panel">
-        <div class="panel-title">判定結果</div>
         <div id="resultBox" class="result-box">
-          <div class="result-state">待機</div>
-          <div class="result-detail">柱位置を選択して、QRを読んでください。</div>
+          <div class="result-state">未判定</div>
+          <div class="result-detail">柱位置を選択して、QRを読取してください。</div>
         </div>
       </div>
     </div>
 
     <div class="bottom-panel">
       <div class="stack">
-        <div class="panel-title">読めない時の手動入力 / 再読取</div>
-        <input class="input" id="qrInput" placeholder="読めない時はここに手動入力">
-        <div id="cameraStatus" class="status">待機中</div>
+        <div class="panel-title">読めない時の手入力 / 読取状態</div>
+        <input class="input" id="qrInput" placeholder="読めない時はこちらに手入力">
+        <div id="cameraStatus" class="status">未起動</div>
       </div>
 
-      <div class="stack">
+      <div class="stack compact">
         <div class="panel-title">操作</div>
         <div class="toolbar">
           <button class="btn primary" id="cameraOnBtn">カメラ起動</button>
           <button class="btn" id="cameraOffBtn">カメラOFF</button>
-          <button class="btn warn" id="saveBtn">記録</button>
         </div>
+        <a class="link-btn" id="adminLink" href="admin.html">管理画面</a>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <div class="history-head">
+        <div>
+          <div class="title">判定履歴</div>
+          <div class="history-count" id="historyCount">0件</div>
+        </div>
+        <div class="history-actions">
+          <button class="btn" id="historyToggleBtn" type="button">履歴を見る</button>
+          <button class="btn danger" id="clearHistoryBtn" type="button">この現場の履歴を消去</button>
+        </div>
+      </div>
+      <div class="history-panel" id="historyPanel">
+        <div class="history-empty" id="historyEmpty">まだ履歴はありません。柱を選択してQR判定するとここに記録されます。</div>
+        <div class="history-list" id="historyList"></div>
       </div>
     </div>
   </div>
@@ -178,65 +252,18 @@
       <button class="camera-close" id="cameraCloseBtn">×</button>
       <video id="video" autoplay playsinline muted></video>
       <div class="scan-guide"></div>
-      <div class="camera-footer">QRを枠の中央に重ねてください</div>
+      <div class="camera-footer">QRを枠の中に合わせてください</div>
     </div>
   </div>
 
   <canvas id="qrCanvas" style="display:none;"></canvas>
 
   <script>
-    const sites = {
-      sampleA: {
-        title: "sampleA",
-        siteName: "サンプル現場A",
-        drawingName: "251210修正ハイベース設置図",
-        image: "keyplan.png",
-        positions: [
-          { id: "X1-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.154 },
-          { id: "X2-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.154 },
-          { id: "X3-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.548, y: 0.154 },
-          { id: "X4-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.154 },
-          { id: "X5-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.154 },
-          { id: "X1-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.188, y: 0.389 },
-          { id: "X2-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.371, y: 0.389 },
-          { id: "X4-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.725, y: 0.389 },
-          { id: "X5-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.907, y: 0.389 },
-          { id: "X1-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.634 },
-          { id: "X2-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.634 },
-          { id: "X3-Y1", label: "C1", requiredType: "EB300-8-36", x: 0.548, y: 0.634 },
-          { id: "X4-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.634 },
-          { id: "X5-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.634 }
-        ]
-      },
-      sampleB: {
-        title: "sampleB",
-        siteName: "サンプル現場B",
-        drawingName: "251210修正ハイベース設置図_B",
-        image: "keyplan.png",
-        positions: [
-          { id: "X1-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.154 },
-          { id: "X2-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.154 },
-          { id: "X3-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.548, y: 0.154 },
-          { id: "X4-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.154 },
-          { id: "X5-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.154 },
-          { id: "X1-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.188, y: 0.389 },
-          { id: "X2-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.371, y: 0.389 },
-          { id: "X4-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.725, y: 0.389 },
-          { id: "X5-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.907, y: 0.389 },
-          { id: "X1-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.634 },
-          { id: "X2-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.634 },
-          { id: "X3-Y1", label: "C1", requiredType: "EB300-8-36", x: 0.548, y: 0.634 },
-          { id: "X4-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.634 },
-          { id: "X5-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.634 }
-        ]
-      }
-    };
-
-    const defaultTitle = Object.keys(sites)[0];
-    const requestedTitle = new URLSearchParams(location.search).get("TITLE");
-    const currentTitle = sites[requestedTitle] ? requestedTitle : defaultTitle;
-    const currentSite = sites[currentTitle];
-    const historyKey = `history_${currentTitle}`;
+    const SITE_DATA_URL = "sites.json";
+    let sites = {};
+    let currentTitle = "";
+    let currentSite = null;
+    let historyKey = "";
 
     let selected = null;
     let history = [];
@@ -248,6 +275,7 @@
     let tapStart = null;
     let gestureMoved = false;
     let panzoomRecoveryFrame = null;
+    let historyPanelOpen = false;
 
     const planViewport = document.getElementById("planViewport");
     const planContent = document.getElementById("planContent");
@@ -262,10 +290,85 @@
     const qrInput = document.getElementById("qrInput");
     const cameraStatus = document.getElementById("cameraStatus");
     const resultBox = document.getElementById("resultBox");
+    const historyCount = document.getElementById("historyCount");
+    const historyPanel = document.getElementById("historyPanel");
+    const historyList = document.getElementById("historyList");
+    const historyEmpty = document.getElementById("historyEmpty");
+    const historyToggleBtn = document.getElementById("historyToggleBtn");
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
     const cameraWrap = document.getElementById("cameraWrap");
     const video = document.getElementById("video");
     const canvas = document.getElementById("qrCanvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    function normalizePositionRecord(position){
+      const id = String(position?.id || "").trim();
+      const label = String(position?.label || "").trim();
+      const requiredType = String(position?.requiredType || "").trim();
+      const x = Number(position?.x);
+      const y = Number(position?.y);
+
+      if (!id || !label || !requiredType) return null;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+
+      return { id, label, requiredType, x, y };
+    }
+
+    function normalizeSiteRecord(site){
+      const title = String(site?.title || "").trim();
+      const siteId = String(site?.siteId || title).trim();
+      const positions = Array.isArray(site?.positions)
+        ? site.positions.map(normalizePositionRecord).filter(Boolean)
+        : [];
+
+      return {
+        siteId,
+        title,
+        siteName: String(site?.siteName || "").trim(),
+        drawingName: String(site?.drawingName || "").trim(),
+        image: String(site?.image || "").trim(),
+        positions
+      };
+    }
+
+    async function loadSitesData(){
+      const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
+      if (!response.ok){
+        throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
+      }
+
+      const rawSites = await response.json();
+      if (!Array.isArray(rawSites) || !rawSites.length){
+        throw new Error(`${SITE_DATA_URL} does not contain any site records.`);
+      }
+
+      const nextSites = {};
+      rawSites.forEach(rawSite => {
+        const site = normalizeSiteRecord(rawSite);
+        if (!site.title) return;
+        nextSites[site.title] = site;
+      });
+
+      if (!Object.keys(nextSites).length){
+        throw new Error(`${SITE_DATA_URL} does not contain any valid site records.`);
+      }
+
+      return nextSites;
+    }
+
+    function resolveInitialTitle(nextSites){
+      const defaultTitle = Object.keys(nextSites)[0];
+      const requestedTitle = new URLSearchParams(location.search).get("TITLE");
+      return nextSites[requestedTitle] ? requestedTitle : defaultTitle;
+    }
+
+    function setCurrentSite(title){
+      currentTitle = title;
+      currentSite = sites[title];
+      historyKey = `history_${currentSite.siteId}`;
+    }
+
 
 
     function applyContentTransform(){
@@ -466,10 +569,10 @@
     function renderSelection(){
       if (!selected){
         selectedMain.textContent = "未選択";
-        selectedSub.textContent = "KEY PLAN上の柱をタップすると自動でカメラ起動";
+        selectedSub.textContent = "";
       } else {
         selectedMain.textContent = `${selected.id} / ${selected.label}`;
-        selectedSub.textContent = `必要TYPE: ${selected.requiredType}`;
+        selectedSub.textContent = "";
       }
     }
 
@@ -478,7 +581,7 @@
       const result = getResult();
       if (!result){
         resultBox.className = "result-box";
-        resultBox.innerHTML = `<div class="result-state">待機</div><div class="result-detail">柱位置を選択して、QRを読んでください。</div>`;
+        resultBox.innerHTML = `<div class="result-state">未判定</div><div class="result-detail">柱位置を選択して、QRを読取してください。</div>`;
         return;
       }
       if (result === "ok"){
@@ -487,7 +590,7 @@
         if (navigator.vibrate) navigator.vibrate(60);
       } else {
         resultBox.className = "result-box ng";
-        resultBox.innerHTML = `<div class="result-state">不一致</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
+        resultBox.innerHTML = `<div class="result-state">不適合</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
         if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
       }
     }
@@ -496,6 +599,61 @@
       renderMarkers();
       renderSelection();
       renderResult();
+      renderHistoryList();
+    }
+
+    function renderHistoryList(){
+      historyCount.textContent = `${history.length}件`;
+      historyPanel.classList.toggle("open", historyPanelOpen);
+      historyToggleBtn.textContent = historyPanelOpen ? "履歴を閉じる" : "履歴を見る";
+
+      historyList.innerHTML = "";
+      historyEmpty.style.display = history.length ? "none" : "block";
+      if (!history.length) return;
+
+      history.forEach(entry => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+
+        const badgeClass = entry.result === "ok" ? "ok" : "ng";
+        const badgeText = entry.result === "ok" ? "OK" : "NG";
+        const positionText = entry.label ? `${entry.label} / ${entry.pos}` : entry.pos;
+
+        item.innerHTML = `
+          <div class="history-item-top">
+            <div>
+              <div class="history-item-main">${positionText}</div>
+              <div class="history-item-time">${entry.time || "-"}</div>
+            </div>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="history-item-grid">
+            <div>
+              <div class="history-label">読取値</div>
+              <div>${entry.scannedType || "-"}</div>
+            </div>
+            <div>
+              <div class="history-label">必要値</div>
+              <div>${entry.requiredType || "-"}</div>
+            </div>
+          </div>
+        `;
+
+        historyList.appendChild(item);
+      });
+    }
+
+    function toggleHistoryPanel(){
+      historyPanelOpen = !historyPanelOpen;
+      renderHistoryList();
+    }
+
+    function clearCurrentSiteHistory(){
+      if (!confirm("この現場の履歴を削除します。よろしいですか？")) return;
+      history = [];
+      localStorage.removeItem(historyKey);
+      alert("この現場の履歴を削除しました");
+      renderHistoryList();
     }
 
     function stopCamera(){
@@ -506,13 +664,13 @@
       }
       video.srcObject = null;
       cameraWrap.style.display = "none";
-      cameraStatus.textContent = "待機中";
+      cameraStatus.textContent = "未起動";
       recoverPanzoomAfterCamera();
     }
 
     async function startCamera(){
       if (typeof jsQR === "undefined"){
-        alert("QR読取ライブラリの読込に失敗しました。通信状態を確認して再読み込みしてください。");
+        alert("QR読取ライブラリの読込に失敗しました。通信環境を確認して再読み込みしてください。");
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
@@ -545,7 +703,7 @@
           }
         }, 320);
       } catch (e){
-        alert("カメラを起動できませんでした。Safariのカメラ許可を確認してください。");
+        alert("カメラを起動できませんでした。Safariのカメラ許可設定を確認してください。");
         cameraStatus.textContent = "カメラ起動失敗";
       }
     }
@@ -566,28 +724,36 @@
         result
       });
       localStorage.setItem(historyKey, JSON.stringify(history));
-      alert("判定を記録しました");
+      alert("照合履歴を保存しました");
+      renderHistoryList();
     }
 
     function loadHistory(){
+      const legacyHistoryKey = currentSite?.title ? `history_${currentSite.title}` : "";
       try{
         history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+        if (!history.length && legacyHistoryKey && legacyHistoryKey !== historyKey){
+          history = JSON.parse(localStorage.getItem(legacyHistoryKey) || "[]");
+        }
       } catch {
         history = [];
       }
     }
 
-    function initializeApp(){
+    async function initializeApp(){
+      sites = await loadSitesData();
+      setCurrentSite(resolveInitialTitle(sites));
       loadSite(currentSite);
       loadHistory();
       syncPlanViewport(true);
       renderAll();
     }
-
     document.getElementById("cameraOnBtn").addEventListener("click", startCamera);
     document.getElementById("cameraOffBtn").addEventListener("click", stopCamera);
     document.getElementById("cameraCloseBtn").addEventListener("click", stopCamera);
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
+    historyToggleBtn.addEventListener("click", toggleHistoryPanel);
+    clearHistoryBtn.addEventListener("click", clearCurrentSiteHistory);
     qrInput.addEventListener("input", renderResult);
 
     planStage.addEventListener("pointerdown", event => {
@@ -664,7 +830,10 @@
       syncPlanViewport(true);
       renderAll();
     });
-    initializeApp();
+    initializeApp().catch(error => {
+      console.error(error);
+      alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
+    });
   </script>
 </body>
 </html>

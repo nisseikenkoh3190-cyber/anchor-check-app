@@ -1,0 +1,48 @@
+[
+  {
+    "siteId": "sampleA",
+    "title": "sampleA",
+    "siteName": "サンプル現場A",
+    "drawingName": "251210基礎ハイベース設置図",
+    "image": "keyplan.png",
+    "positions": [
+      { "id": "X1-Y3", "label": "C3", "requiredType": "EB300-8-30", "x": 0.188, "y": 0.154 },
+      { "id": "X2-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.154 },
+      { "id": "X3-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.548, "y": 0.154 },
+      { "id": "X4-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.154 },
+      { "id": "X5-Y3", "label": "C3", "requiredType": "EB300-8-30", "x": 0.907, "y": 0.154 },
+      { "id": "X1-Y2", "label": "C2", "requiredType": "EB300-8-36", "x": 0.188, "y": 0.389 },
+      { "id": "X2-Y2", "label": "C1", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.389 },
+      { "id": "X4-Y2", "label": "C1", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.389 },
+      { "id": "X5-Y2", "label": "C2", "requiredType": "EB300-8-36", "x": 0.907, "y": 0.389 },
+      { "id": "X1-Y1", "label": "C3", "requiredType": "EB300-8-30", "x": 0.188, "y": 0.634 },
+      { "id": "X2-Y1", "label": "C2", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.634 },
+      { "id": "X3-Y1", "label": "C1", "requiredType": "EB300-8-36", "x": 0.548, "y": 0.634 },
+      { "id": "X4-Y1", "label": "C2", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.634 },
+      { "id": "X5-Y1", "label": "C3", "requiredType": "EB300-8-30", "x": 0.907, "y": 0.634 }
+    ]
+  },
+  {
+    "siteId": "sampleB",
+    "title": "sampleB",
+    "siteName": "サンプル現場B",
+    "drawingName": "251210基礎ハイベース設置図_B",
+    "image": "keyplan.png",
+    "positions": [
+      { "id": "X1-Y3", "label": "C3", "requiredType": "EB300-8-30", "x": 0.188, "y": 0.154 },
+      { "id": "X2-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.154 },
+      { "id": "X3-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.548, "y": 0.154 },
+      { "id": "X4-Y3", "label": "C2", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.154 },
+      { "id": "X5-Y3", "label": "C3", "requiredType": "EB300-8-30", "x": 0.907, "y": 0.154 },
+      { "id": "X1-Y2", "label": "C2", "requiredType": "EB300-8-36", "x": 0.188, "y": 0.389 },
+      { "id": "X2-Y2", "label": "C1", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.389 },
+      { "id": "X4-Y2", "label": "C1", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.389 },
+      { "id": "X5-Y2", "label": "C2", "requiredType": "EB300-8-36", "x": 0.907, "y": 0.389 },
+      { "id": "X1-Y1", "label": "C3", "requiredType": "EB300-8-30", "x": 0.188, "y": 0.634 },
+      { "id": "X2-Y1", "label": "C2", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.634 },
+      { "id": "X3-Y1", "label": "C1", "requiredType": "EB300-8-36", "x": 0.548, "y": 0.634 },
+      { "id": "X4-Y1", "label": "C2", "requiredType": "EB300-8-36", "x": 0.725, "y": 0.634 },
+      { "id": "X5-Y1", "label": "C3", "requiredType": "EB300-8-30", "x": 0.907, "y": 0.634 }
+    ]
+  }
+]
