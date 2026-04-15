@@ -116,16 +116,16 @@
   <div class="app">
     <div class="topbar">
       <div>
-        <div class="title">アンカーボルト照合アプリ / 現場完成版</div>
-        <div class="meta">現場: サンプル現場A / 図面: 251210修正ハイベース設置図</div>
+        <div class="title" id="pageTitle">アンカーボルト照合アプリ / 現場完成版</div>
+        <div class="meta" id="pageMeta">現場: サンプル現場A / 図面: 251210修正ハイベース設置図</div>
       </div>
-      <a class="link-btn" href="admin.html">管理画面</a>
+      <a class="link-btn" id="adminLink" href="admin.html">管理画面</a>
     </div>
 
     <div class="plan-card">
       <div class="plan-wrap">
         <div class="plan-stage" id="planStage">
-          <img class="plan-img" id="planImage" alt="KEY PLAN" src="keyplan.png">
+          <img class="plan-img" id="planImage" alt="KEY PLAN">
         </div>
       </div>
     </div>
@@ -175,22 +175,58 @@
   <canvas id="qrCanvas" style="display:none;"></canvas>
 
   <script>
-    const positions = [
-      { id: "X1-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.154 },
-      { id: "X2-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.154 },
-      { id: "X3-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.548, y: 0.154 },
-      { id: "X4-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.154 },
-      { id: "X5-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.154 },
-      { id: "X1-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.188, y: 0.389 },
-      { id: "X2-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.371, y: 0.389 },
-      { id: "X4-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.725, y: 0.389 },
-      { id: "X5-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.907, y: 0.389 },
-      { id: "X1-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.634 },
-      { id: "X2-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.634 },
-      { id: "X3-Y1", label: "C1", requiredType: "EB300-8-36", x: 0.548, y: 0.634 },
-      { id: "X4-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.634 },
-      { id: "X5-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.634 }
-    ];
+    const sites = {
+      sampleA: {
+        title: "sampleA",
+        siteName: "サンプル現場A",
+        drawingName: "251210修正ハイベース設置図",
+        image: "keyplan.png",
+        positions: [
+          { id: "X1-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.154 },
+          { id: "X2-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.154 },
+          { id: "X3-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.548, y: 0.154 },
+          { id: "X4-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.154 },
+          { id: "X5-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.154 },
+          { id: "X1-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.188, y: 0.389 },
+          { id: "X2-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.371, y: 0.389 },
+          { id: "X4-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.725, y: 0.389 },
+          { id: "X5-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.907, y: 0.389 },
+          { id: "X1-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.634 },
+          { id: "X2-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.634 },
+          { id: "X3-Y1", label: "C1", requiredType: "EB300-8-36", x: 0.548, y: 0.634 },
+          { id: "X4-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.634 },
+          { id: "X5-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.634 }
+        ]
+      },
+      sampleB: {
+        title: "sampleB",
+        siteName: "サンプル現場B",
+        drawingName: "251210修正ハイベース設置図_B",
+        image: "keyplan.png",
+        positions: [
+          { id: "X1-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.154 },
+          { id: "X2-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.154 },
+          { id: "X3-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.548, y: 0.154 },
+          { id: "X4-Y3", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.154 },
+          { id: "X5-Y3", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.154 },
+          { id: "X1-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.188, y: 0.389 },
+          { id: "X2-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.371, y: 0.389 },
+          { id: "X4-Y2", label: "C1", requiredType: "EB300-8-36", x: 0.725, y: 0.389 },
+          { id: "X5-Y2", label: "C2", requiredType: "EB300-8-36", x: 0.907, y: 0.389 },
+          { id: "X1-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.188, y: 0.634 },
+          { id: "X2-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.371, y: 0.634 },
+          { id: "X3-Y1", label: "C1", requiredType: "EB300-8-36", x: 0.548, y: 0.634 },
+          { id: "X4-Y1", label: "C2", requiredType: "EB300-8-36", x: 0.725, y: 0.634 },
+          { id: "X5-Y1", label: "C3", requiredType: "EB300-8-30", x: 0.907, y: 0.634 }
+        ]
+      }
+    };
+
+    const defaultTitle = Object.keys(sites)[0];
+    const requestedTitle = new URLSearchParams(location.search).get("TITLE");
+    const currentTitle = sites[requestedTitle] ? requestedTitle : defaultTitle;
+    const currentSite = sites[currentTitle];
+    const historyKey = `history_${currentTitle}`;
 
     let selected = null;
     let history = [];
@@ -199,6 +235,9 @@
 
     const planStage = document.getElementById("planStage");
     const planImage = document.getElementById("planImage");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageMeta = document.getElementById("pageMeta");
+    const adminLink = document.getElementById("adminLink");
     const selectedMain = document.getElementById("selectedMain");
     const selectedSub = document.getElementById("selectedSub");
     const qrInput = document.getElementById("qrInput");
@@ -208,6 +247,14 @@
     const video = document.getElementById("video");
     const canvas = document.getElementById("qrCanvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    function applyCurrentSite(){
+      document.title = `アンカーボルト照合アプリ ${currentSite.title}`;
+      pageTitle.textContent = `アンカーボルト照合アプリ / ${currentSite.title}`;
+      pageMeta.textContent = `現場: ${currentSite.siteName} / 図面: ${currentSite.drawingName}`;
+      planImage.src = currentSite.image;
+      adminLink.href = `admin.html?TITLE=${encodeURIComponent(currentTitle)}`;
+    }
 
     function parseQrValue(raw){
       if (!raw) return "";
@@ -241,7 +288,7 @@
       [...planStage.querySelectorAll(".marker, .marker-label")].forEach(el => el.remove());
       const r = getImageRect();
       if (!r.width || !r.height) return;
-      positions.forEach(pos => {
+      currentSite.positions.forEach(pos => {
         const left = r.left + r.width * pos.x;
         const top = r.top + r.height * pos.y;
 
@@ -367,13 +414,13 @@
         scannedType: parsed,
         result
       });
-      localStorage.setItem("anchorBoltHistory", JSON.stringify(history));
+      localStorage.setItem(historyKey, JSON.stringify(history));
       alert("判定を記録しました");
     }
 
     function loadHistory(){
       try{
-        history = JSON.parse(localStorage.getItem("anchorBoltHistory") || "[]");
+        history = JSON.parse(localStorage.getItem(historyKey) || "[]");
       } catch {
         history = [];
       }
@@ -388,6 +435,7 @@
     planImage.addEventListener("load", renderAll);
     window.addEventListener("resize", renderMarkers);
 
+    applyCurrentSite();
     loadHistory();
     renderAll();
   </script>
