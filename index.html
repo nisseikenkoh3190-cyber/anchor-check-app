@@ -51,6 +51,9 @@
     .marker{
       fill:rgba(245,158,11,.28);stroke:#b45309;stroke-width:2;cursor:pointer;pointer-events:visiblePainted
     }
+    .marker.active{
+      fill:rgba(14,165,233,.34);stroke:#0369a1
+    }
     .marker.feedback{
       fill:rgba(14,165,233,.34);stroke:#0369a1
     }
@@ -620,10 +623,11 @@
       currentDrawing.positions.forEach(pos => {
         const cx = planMetrics.width * pos.x;
         const cy = planMetrics.height * pos.y;
+        const isActive = selected && selected.id === pos.id;
         const isFeedback = feedbackMarkerId === pos.id;
 
         const marker = document.createElementNS(svgNs, "circle");
-        marker.setAttribute("class", "marker" + (isFeedback ? " feedback" : ""));
+        marker.setAttribute("class", "marker" + (isActive ? " active" : "") + (isFeedback ? " feedback" : ""));
         marker.setAttribute("cx", cx);
         marker.setAttribute("cy", cy);
         marker.setAttribute("r", isFeedback ? MARKER_RADIUS * SELECTION_FEEDBACK_SCALE : MARKER_RADIUS);
