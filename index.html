@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>アンカーボルト照合アプリ 現場画面</title>
+  <title>驛｢・ｧ繝ｻ・｢驛｢譎｢・ｽ・ｳ驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・ｼ驛｢譎・鯵・取刮・ｹ譎√＃郢晢ｽｻ髯ｷ・ｷ陋ｹ・ｻ邵ｺ繝ｻ・ｹ譎丞ｹｲ・弱・髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ鬨ｾ蛹・ｽｽ・ｻ鬯ｮ・ｱ繝ｻ・｢</title>
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --line:#cbd5e1; --text:#0f172a; --muted:#475569;
@@ -53,6 +53,12 @@
     }
     .marker.active{
       fill:rgba(14,165,233,.34);stroke:#0369a1
+    }
+    .marker.ok{
+      fill:rgba(16,185,129,.32);stroke:#059669
+    }
+    .marker.ng{
+      fill:rgba(239,68,68,.28);stroke:#dc2626
     }
     .marker.feedback{
       fill:rgba(14,165,233,.34);stroke:#0369a1
@@ -173,8 +179,8 @@
   <div class="app">
     <div class="topbar">
       <div>
-        <div class="title" id="pageTitle">サンプル現場A</div>
-        <div class="meta" id="pageMeta">251210基礎ハイベース設置図</div>
+        <div class="title" id="pageTitle">驛｢・ｧ繝ｻ・ｵ驛｢譎｢・ｽ・ｳ驛｢譎丞ｹｲ・取凵・ｿ・ｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴA</div>
+        <div class="meta" id="pageMeta">251210髯憺屮・ｽ・ｺ鬩慕甥・ｼ・ｱ郢晢ｽｯ驛｢・ｧ繝ｻ・､驛｢譎冗函郢晢ｽｻ驛｢・ｧ繝ｻ・ｹ鬮ｫ・ｪ繝ｻ・ｭ鬩励ｑ・ｽ・ｮ髯懈圜・ｽ・ｳ</div>
       </div>
     </div>
 
@@ -193,50 +199,50 @@
       <div class="panel">
         <div class="selected-row">
           <div class="selected-info">
-            <div id="selectedMain" class="selected-main">未選択</div>
+            <div id="selectedMain" class="selected-main">髫ｴ蟷｢・ｽ・ｪ鬯ｩ蛹・ｽｽ・ｸ髫ｰ螢ｹ繝ｻ/div>
             <div id="selectedSub" class="selected-sub"></div>
           </div>
-          <button class="btn warn inline" id="saveBtn" type="button">保存</button>
+          <button class="btn warn inline" id="saveBtn" type="button">髣厄ｽｫ隴取得・ｽ・ｭ郢晢ｽｻ/button>
         </div>
       </div>
       <div class="panel">
         <div id="resultBox" class="result-box">
-          <div class="result-state">未判定</div>
-          <div class="result-detail">柱位置を選択して、QRを読取してください。</div>
+          <div class="result-state">髫ｴ蟷｢・ｽ・ｪ髯具ｽｻ繝ｻ・､髯橸ｽｳ郢晢ｽｻ/div>
+          <div class="result-detail">髫ｴ貊ゑｽｽ・ｱ髣厄ｽｴ陷･・ｲ繝ｻ・ｽ繝ｻ・ｮ驛｢・ｧ陝ｶ譏ｶ繝ｻ髫ｰ螢ｽ・ｧ・ｭ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦ驍ｵ・ｲ繝ｻ・ｿR驛｢・ｧ陞ｳ螟ｲ・ｽ・ｪ繝ｻ・ｭ髯ｷ・ｿ隰費ｽｶ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦ驍ｵ・ｺ闕ｳ蟯ｩ蜻ｳ驍ｵ・ｺ髴郁ｲｻ・ｼ讓抵ｽｸ・ｲ郢晢ｽｻ/div>
         </div>
       </div>
     </div>
 
     <div class="bottom-panel">
       <div class="stack">
-        <div class="panel-title">読めない時の手入力 / 読取状態</div>
-        <input class="input" id="qrInput" placeholder="読めない時はこちらに手入力">
-        <div id="cameraStatus" class="status">未起動</div>
+        <div class="panel-title">鬮ｫ・ｱ繝ｻ・ｭ驛｢・ｧ遶丞｣ｺ繝ｻ驍ｵ・ｺ郢晢ｽｻ陷・ｽｾ驍ｵ・ｺ繝ｻ・ｮ髫ｰ繝ｻ蜚ｱ郢晢ｽｻ髯ｷ蟲ｨ繝ｻ/ 鬮ｫ・ｱ繝ｻ・ｭ髯ｷ・ｿ闕ｵ貊薙・髫ｲ・ｷ郢晢ｽｻ/div>
+        <input class="input" id="qrInput" placeholder="鬮ｫ・ｱ繝ｻ・ｭ驛｢・ｧ遶丞｣ｺ繝ｻ驍ｵ・ｺ郢晢ｽｻ陷・ｽｾ驍ｵ・ｺ繝ｻ・ｯ驍ｵ・ｺ髦ｮ蜷ｮ阡馴Δ・ｧ陝ｲ・ｨ遶頑･｢・ｬ繝ｻ蜚ｱ郢晢ｽｻ髯ｷ蟲ｨ繝ｻ>
+        <div id="cameraStatus" class="status">髫ｴ蟷｢・ｽ・ｪ髫俶誓・ｽ・ｷ髯ｷ髦ｪ繝ｻ/div>
       </div>
 
       <div class="stack compact">
-        <div class="panel-title">操作</div>
+        <div class="panel-title">髫ｰ・ｫ陜｣・ｺ繝ｻ・ｽ郢晢ｽｻ/div>
         <div class="toolbar">
-          <button class="btn primary" id="cameraOnBtn">カメラ起動</button>
-          <button class="btn" id="cameraOffBtn">カメラOFF</button>
+          <button class="btn primary" id="cameraOnBtn">驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ髫俶誓・ｽ・ｷ髯ｷ髦ｪ繝ｻ/button>
+          <button class="btn" id="cameraOffBtn">驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩOFF</button>
         </div>
-        <a class="link-btn" id="adminLink" href="admin.html">管理画面へもどる</a>
+        <a class="link-btn" id="adminLink" href="admin.html">鬩阪ｑ・ｽ・｡鬨ｾ繝ｻ繝ｻ陋ｻ・､鬯ｮ・ｱ繝ｻ・｢驍ｵ・ｺ繝ｻ・ｸ驛｢・ｧ郢ｧ繝ｻ繝ｻ驛｢・ｧ郢晢ｽｻ/a>
       </div>
     </div>
 
     <div class="history-card">
       <div class="history-head">
         <div>
-          <div class="title">判定履歴</div>
-          <div class="history-count" id="historyCount">0件</div>
+          <div class="title">髯具ｽｻ繝ｻ・､髯橸ｽｳ陞｢・ｼ繝ｻ・ｱ繝ｻ・･髮弱・・ｽ・ｴ</div>
+          <div class="history-count" id="historyCount">0髣比ｼ夲ｽｽ・ｶ</div>
         </div>
         <div class="history-actions">
-          <button class="btn" id="historyToggleBtn" type="button">履歴を見る</button>
-          <button class="btn danger" id="clearHistoryBtn" type="button">この現場の履歴を消去</button>
+          <button class="btn" id="historyToggleBtn" type="button">髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ陞ｳ螟ｲ・ｽ・ｦ闕ｵ譎｢・ｽ繝ｻ/button>
+          <button class="btn danger" id="clearHistoryBtn" type="button">驍ｵ・ｺ髦ｮ蜷ｶ繝ｻ髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ驍ｵ・ｺ繝ｻ・ｮ髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ陷ｻ闌ｨ・ｽ・ｶ闔・･隰斐・/button>
         </div>
       </div>
       <div class="history-panel" id="historyPanel">
-        <div class="history-empty" id="historyEmpty">まだ履歴はありません。柱を選択してQR判定するとここに記録されます。</div>
+        <div class="history-empty" id="historyEmpty">驍ｵ・ｺ繝ｻ・ｾ驍ｵ・ｺ繝ｻ・ｰ髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驍ｵ・ｺ繝ｻ・ｯ驍ｵ・ｺ郢ｧ繝ｻ・ｽ鬘費ｽｸ・ｺ繝ｻ・ｾ驍ｵ・ｺ陝ｶ蜻ｻ・ｽ骰具ｽｸ・ｲ郢ｧ蝓滂ｽｵ・､驛｢・ｧ陝ｶ譏ｶ繝ｻ髫ｰ螢ｽ・ｧ・ｭ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦQR髯具ｽｻ繝ｻ・､髯橸ｽｳ陞｢・ｹ隨倥・・ｹ・ｧ闕ｵ譏ｶ繝ｻ驍ｵ・ｺ髦ｮ蜻ｻ・ｼ繝ｻ・ｸ・ｺ繝ｻ・ｫ鬮ｫ・ｪ陋滂ｽｬ魄厄ｽｸ驍ｵ・ｺ髴郁ｲｻ・ｽ讙趣ｽｸ・ｺ繝ｻ・ｾ驍ｵ・ｺ陷ｷ・ｶ・つ郢晢ｽｻ/div>
         <div class="history-list" id="historyList"></div>
       </div>
     </div>
@@ -244,10 +250,10 @@
 
   <div class="camera-wrap" id="cameraWrap">
     <div class="camera-card">
-      <button class="camera-close" id="cameraCloseBtn">×</button>
+      <button class="camera-close" id="cameraCloseBtn">繝ｻ繝ｻ繝ｻ/button>
       <video id="video" autoplay playsinline muted></video>
       <div class="scan-guide"></div>
-      <div class="camera-footer">QRを枠の中に合わせてください</div>
+      <div class="camera-footer">QR驛｢・ｧ陷ｻ蝓滂ｽ｣・ｧ驍ｵ・ｺ繝ｻ・ｮ髣包ｽｳ繝ｻ・ｭ驍ｵ・ｺ繝ｻ・ｫ髯ｷ・ｷ陋ｹ・ｻ繝ｻ蜀暦ｽｸ・ｺ陝ｶ蜷ｮﾂ・ｻ驍ｵ・ｺ闕ｳ蟯ｩ蜻ｳ驍ｵ・ｺ髴郁ｲｻ・ｼ繝ｻ/div>
     </div>
   </div>
 
@@ -272,6 +278,8 @@
     let selected = null;
     let feedbackMarkerId = "";
     let selectionFeedbackToken = 0;
+    let markerStatuses = {};
+    let latestJudgement = null;
     let history = [];
     let videoStream = null;
     let scanTimer = null;
@@ -405,6 +413,9 @@
 
     function loadDrawing(){
       selected = null;
+      feedbackMarkerId = "";
+      latestJudgement = null;
+      markerStatuses = {};
       document.title = `${currentSite.siteName} ${currentDrawing.drawingName}`;
       pageTitle.textContent = currentSite.siteName;
       pageMeta.textContent = currentDrawing.drawingName;
@@ -598,11 +609,50 @@
       return nearestDistance <= safeHitRadius ? nearest : null;
     }
 
+    function getMarkerStatusClass(pos){
+      if (selected && selected.id === pos.id) return " active";
+      const status = markerStatuses[pos.id];
+      if (status === "ok") return " ok";
+      if (status === "ng") return " ng";
+      return "";
+    }
+
+    function applyJudgement(result, parsed){
+      if (!selected || !result || !parsed) return;
+
+      const judgedPosition = selected;
+      markerStatuses[judgedPosition.id] = result;
+      latestJudgement = {
+        positionId: judgedPosition.id,
+        displayName: judgedPosition.displayName,
+        label: judgedPosition.label,
+        requiredType: judgedPosition.requiredType,
+        scannedType: parsed,
+        result
+      };
+      selected = null;
+      feedbackMarkerId = "";
+      selectionFeedbackToken += 1;
+      if (navigator.vibrate){
+        navigator.vibrate(result === "ok" ? 60 : [80, 60, 80]);
+      }
+    }
+
+    function syncJudgementFromInput(){
+      const parsed = parseQrValue(qrInput.value);
+      const result = getResult();
+      if (selected && parsed && result){
+        applyJudgement(result, parsed);
+      }
+      renderAll();
+    }
+
     async function selectPosition(pos){
       if (!pos) return;
       const token = ++selectionFeedbackToken;
       selected = pos;
       feedbackMarkerId = pos.id;
+      latestJudgement = null;
       renderAll();
 
       await new Promise(resolve => setTimeout(resolve, SELECTION_FEEDBACK_MS));
@@ -623,11 +673,10 @@
       currentDrawing.positions.forEach(pos => {
         const cx = planMetrics.width * pos.x;
         const cy = planMetrics.height * pos.y;
-        const isActive = selected && selected.id === pos.id;
         const isFeedback = feedbackMarkerId === pos.id;
 
         const marker = document.createElementNS(svgNs, "circle");
-        marker.setAttribute("class", "marker" + (isActive ? " active" : "") + (isFeedback ? " feedback" : ""));
+        marker.setAttribute("class", "marker" + getMarkerStatusClass(pos) + (isFeedback ? " feedback" : ""));
         marker.setAttribute("cx", cx);
         marker.setAttribute("cy", cy);
         marker.setAttribute("r", isFeedback ? MARKER_RADIUS * SELECTION_FEEDBACK_SCALE : MARKER_RADIUS);
@@ -645,26 +694,25 @@
         selectedSub.textContent = "";
       }
     }
-
     function renderResult(){
       const parsed = parseQrValue(qrInput.value);
       const result = getResult();
-      if (!result){
+      const displayResult = selected && parsed && result
+        ? { requiredType: selected.requiredType, scannedType: parsed, result }
+        : latestJudgement;
+      if (!displayResult){
         resultBox.className = "result-box";
-        resultBox.innerHTML = `<div class="result-state">未判定</div><div class="result-detail">柱位置を選択して、QRを読取してください。</div>`;
+        resultBox.innerHTML = `<div class="result-state">譛ｪ蛻､螳・/div><div class="result-detail">譟ｱ菴咲ｽｮ繧帝∈謚槭＠縺ｦ縲＿R繧定ｪｭ蜿悶＠縺ｦ縺上□縺輔＞縲・/div>`;
         return;
       }
-      if (result === "ok"){
+      if (displayResult.result === "ok"){
         resultBox.className = "result-box ok";
-        resultBox.innerHTML = `<div class="result-state">適合</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
-        if (navigator.vibrate) navigator.vibrate(60);
+        resultBox.innerHTML = `<div class="result-state">驕ｩ蜷・/div><div class="result-detail">蠢・ｦゝYPE: ${displayResult.requiredType}<br>隱ｭ蜿傍YPE: ${displayResult.scannedType}</div>`;
       } else {
         resultBox.className = "result-box ng";
-        resultBox.innerHTML = `<div class="result-state">不適合</div><div class="result-detail">必要TYPE: ${selected.requiredType}<br>読取TYPE: ${parsed}</div>`;
-        if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+        resultBox.innerHTML = `<div class="result-state">荳埼←蜷・/div><div class="result-detail">蠢・ｦゝYPE: ${displayResult.requiredType}<br>隱ｭ蜿傍YPE: ${displayResult.scannedType}</div>`;
       }
     }
-
     function renderAll(){
       renderMarkers();
       renderSelection();
@@ -673,9 +721,9 @@
     }
 
     function renderHistoryList(){
-      historyCount.textContent = `${history.length}件`;
+      historyCount.textContent = `${history.length}髣比ｼ夲ｽｽ・ｶ`;
       historyPanel.classList.toggle("open", historyPanelOpen);
-      historyToggleBtn.textContent = historyPanelOpen ? "履歴を閉じる" : "履歴を見る";
+      historyToggleBtn.textContent = historyPanelOpen ? "髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ陝ｶ譎城匕驍ｵ・ｺ陋滂ｽ･繝ｻ繝ｻ : "髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ陞ｳ螟ｲ・ｽ・ｦ闕ｵ譎｢・ｽ繝ｻ;
 
       historyList.innerHTML = "";
       historyEmpty.style.display = history.length ? "none" : "block";
@@ -699,11 +747,11 @@
           </div>
           <div class="history-item-grid">
             <div>
-              <div class="history-label">読取値</div>
+              <div class="history-label">鬮ｫ・ｱ繝ｻ・ｭ髯ｷ・ｿ鬮｢ﾂ・つ繝ｻ・､</div>
               <div>${entry.scannedType || "-"}</div>
             </div>
             <div>
-              <div class="history-label">必要値</div>
+              <div class="history-label">髯滂ｽ｢郢晢ｽｻ繝ｻ・ｦ遶乗楓ﾂ繝ｻ・､</div>
               <div>${entry.requiredType || "-"}</div>
             </div>
           </div>
@@ -719,10 +767,10 @@
     }
 
     function clearCurrentSiteHistory(){
-      if (!confirm("この現場の履歴を削除します。よろしいですか？")) return;
+      if (!confirm("驍ｵ・ｺ髦ｮ蜷ｶ繝ｻ髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ驍ｵ・ｺ繝ｻ・ｮ髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ髮区ｨ抵ｽ朱ｬｮ・ｯ繝ｻ・､驍ｵ・ｺ陷会ｽｱ遶擾ｽｪ驍ｵ・ｺ陷ｷ・ｶ・つ郢ｧ繝ｻ・ｽ閧ｲ・ｹ・ｧ鬮ｦ・ｪ繝ｻ・ｰ驍ｵ・ｺ郢晢ｽｻ邵ｲ蝣､・ｸ・ｺ陷ｷ・ｶ・ゑｽｰ郢晢ｽｻ郢晢ｽｻ)) return;
       history = [];
       localStorage.removeItem(historyKey);
-      alert("この現場の履歴を削除しました");
+      alert("驍ｵ・ｺ髦ｮ蜷ｶ繝ｻ髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ驍ｵ・ｺ繝ｻ・ｮ髯橸ｽｻ繝ｻ・･髮弱・・ｽ・ｴ驛｢・ｧ髮区ｨ抵ｽ朱ｬｮ・ｯ繝ｻ・､驍ｵ・ｺ陷会ｽｱ遶擾ｽｪ驍ｵ・ｺ陷会ｽｱ隨ｳ繝ｻ);
       renderHistoryList();
     }
 
@@ -734,17 +782,17 @@
       }
       video.srcObject = null;
       cameraWrap.style.display = "none";
-      cameraStatus.textContent = "未起動";
+      cameraStatus.textContent = "髫ｴ蟷｢・ｽ・ｪ髫俶誓・ｽ・ｷ髯ｷ髦ｪ繝ｻ;
       recoverPanzoomAfterCamera();
     }
 
     async function startCamera(){
       if (typeof jsQR === "undefined"){
-        alert("QR読取ライブラリの読込に失敗しました。通信環境を確認して再読み込みしてください。");
+        alert("QR鬮ｫ・ｱ繝ｻ・ｭ髯ｷ・ｿ隰費ｽｶ・主ｸｷ・ｹ・ｧ繝ｻ・､驛｢譎・§・主ｸｷ・ｹ譎｢・ｽ・ｪ驍ｵ・ｺ繝ｻ・ｮ鬮ｫ・ｱ繝ｻ・ｭ鬮ｴ雜｣・ｽ・ｼ驍ｵ・ｺ繝ｻ・ｫ髯樊ｻゑｽｽ・ｱ髫ｰ・ｨ陷会ｽｱ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｾ驍ｵ・ｺ陷会ｽｱ隨ｳ繝ｻ・ｸ・ｲ郢ｧ莉ｰﾂ陞｢・ｻ繝ｻ・ｿ繝ｻ・｡髴托ｽｺ繝ｻ・ｰ髯溘・繝ｻ繝ｻ蟶晢ｿ｡繝ｻ・ｺ鬮ｫ・ｱ鬮ｦ・ｪ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦ髯ｷﾂ陝雜｣・ｽ・ｪ繝ｻ・ｭ驍ｵ・ｺ繝ｻ・ｿ鬮ｴ雜｣・ｽ・ｼ驍ｵ・ｺ繝ｻ・ｿ驍ｵ・ｺ陷会ｽｱ遯ｶ・ｻ驍ｵ・ｺ闕ｳ蟯ｩ蜻ｳ驍ｵ・ｺ髴郁ｲｻ・ｼ讓抵ｽｸ・ｲ郢晢ｽｻ);
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("この端末・ブラウザではカメラ起動に対応していません。");
+        alert("驍ｵ・ｺ髦ｮ蜷ｶ繝ｻ鬩包ｽｶ繝ｻ・ｯ髫ｴ蟷｢・ｽ・ｫ驛｢譎｢・ｽ・ｻ驛｢譎・§・主ｸｷ・ｹ・ｧ繝ｻ・ｦ驛｢・ｧ繝ｻ・ｶ驍ｵ・ｺ繝ｻ・ｧ驍ｵ・ｺ繝ｻ・ｯ驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ髫俶誓・ｽ・ｷ髯ｷ蟠趣ｽｼ謚ｫ繝ｻ髯昴・・ｽ・ｾ髯滂ｽ｢隲帛･・ｽｼ・ｰ驍ｵ・ｺ繝ｻ・ｦ驍ｵ・ｺ郢晢ｽｻ遶擾ｽｪ驍ｵ・ｺ陝ｶ蜻ｻ・ｽ骰具ｽｸ・ｲ郢晢ｽｻ);
         return;
       }
       try{
@@ -755,7 +803,7 @@
         });
         video.srcObject = videoStream;
         cameraWrap.style.display = "flex";
-        cameraStatus.textContent = "カメラ起動中";
+        cameraStatus.textContent = "驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ髫俶誓・ｽ・ｷ髯ｷ蜥ｲ・ｩ繧托ｽｽ・ｸ繝ｻ・ｭ";
         await video.play();
 
         scanTimer = setInterval(() => {
@@ -767,38 +815,40 @@
           const code = jsQR(imageData.data, w, h, { inversionAttempts: "dontInvert" });
           if (code && code.data){
             qrInput.value = code.data;
-            cameraStatus.textContent = "QR読取完了";
-            renderResult();
+            cameraStatus.textContent = "QR鬮ｫ・ｱ繝ｻ・ｭ髯ｷ・ｿ鬮｢ﾂ繝ｻ・ｮ陟包ｽ｡繝ｻ・ｺ郢晢ｽｻ;
+            syncJudgementFromInput();
             stopCamera();
           }
         }, 320);
       } catch (e){
-        alert("カメラを起動できませんでした。Safariのカメラ許可設定を確認してください。");
-        cameraStatus.textContent = "カメラ起動失敗";
+        alert("驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ驛｢・ｧ陞ｳ螟ｲ・ｽ・ｵ繝ｻ・ｷ髯ｷ蟠趣ｽｼ譁青蝣､・ｸ・ｺ鬮ｦ・ｪ遶擾ｽｪ驍ｵ・ｺ陝ｶ蜻ｻ・ｽ骰具ｽｸ・ｺ繝ｻ・ｧ驍ｵ・ｺ陷会ｽｱ隨ｳ繝ｻ・ｸ・ｲ繝ｻ陏､fari驍ｵ・ｺ繝ｻ・ｮ驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ鬮ｫ・ｪ繝ｻ・ｱ髯ｷ・ｿ繝ｻ・ｯ鬮ｫ・ｪ繝ｻ・ｭ髯橸ｽｳ陞｢・ｹ繝ｻ蟶晢ｿ｡繝ｻ・ｺ鬮ｫ・ｱ鬮ｦ・ｪ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦ驍ｵ・ｺ闕ｳ蟯ｩ蜻ｳ驍ｵ・ｺ髴郁ｲｻ・ｼ讓抵ｽｸ・ｲ郢晢ｽｻ);
+        cameraStatus.textContent = "驛｢・ｧ繝ｻ・ｫ驛｢譎｢・ｽ・｡驛｢譎｢・ｽ・ｩ髫俶誓・ｽ・ｷ髯ｷ讎贋ｾ帙・・､繝ｻ・ｱ髫ｰ・ｨ郢晢ｽｻ;
       }
     }
 
     function saveHistory(){
-      const parsed = parseQrValue(qrInput.value);
-      const result = getResult();
-      if (!selected || !parsed || !result){
-        alert("柱位置の選択とQR値の入力が必要です。");
+      const judged = latestJudgement;
+      if (!judged){
+        alert("譟ｱ菴咲ｽｮ縺ｮ驕ｸ謚槭→QR蛟､縺ｮ蛻､螳壹′蠢・ｦ√〒縺吶・);
         return;
       }
       history.unshift({
         time: new Date().toISOString().slice(0,19).replace("T"," "),
-        pos: selected.id,
-        displayName: selected.displayName,
-        label: selected.label,
-        requiredType: selected.requiredType,
-        scannedType: parsed,
-        result
+        pos: judged.positionId,
+        displayName: judged.displayName,
+        label: judged.label,
+        requiredType: judged.requiredType,
+        scannedType: judged.scannedType,
+        result: judged.result
       });
       localStorage.setItem(historyKey, JSON.stringify(history));
-      alert("照合履歴を保存しました");
+      if (judged.result === "ok" || judged.result === "ng"){
+        markerStatuses[judged.positionId] = judged.result;
+      }
+      alert("辣ｧ蜷亥ｱ･豁ｴ繧剃ｿ晏ｭ倥＠縺ｾ縺励◆");
       renderHistoryList();
+      renderMarkers();
     }
-
     function loadHistory(){
       const legacyHistoryKeys = [
         currentSite?.siteId ? `history_${currentSite.siteId}` : "",
@@ -816,8 +866,15 @@
       } catch {
         history = [];
       }
-    }
 
+      markerStatuses = {};
+      history.forEach(entry => {
+        if (!entry?.pos) return;
+        if (entry.result === "ok" || entry.result === "ng"){
+          markerStatuses[entry.pos] = entry.result;
+        }
+      });
+    }
     async function initializeApp(){
       sites = await loadSitesData();
       setCurrentSite(resolveInitialTitle(sites));
@@ -833,7 +890,7 @@
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
     historyToggleBtn.addEventListener("click", toggleHistoryPanel);
     clearHistoryBtn.addEventListener("click", clearCurrentSiteHistory);
-    qrInput.addEventListener("input", renderResult);
+    qrInput.addEventListener("input", syncJudgementFromInput);
 
     planStage.addEventListener("pointerdown", event => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -911,7 +968,7 @@
     });
     initializeApp().catch(error => {
       console.error(error);
-      alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
+      alert("髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ驛｢譏ｴ繝ｻ郢晢ｽｻ驛｢・ｧ繝ｻ・ｿ驍ｵ・ｺ繝ｻ・ｮ鬮ｫ・ｱ繝ｻ・ｭ鬮ｴ雜｣・ｽ・ｼ驍ｵ・ｺ繝ｻ・ｫ髯樊ｻゑｽｽ・ｱ髫ｰ・ｨ陷会ｽｱ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｾ驍ｵ・ｺ陷会ｽｱ隨ｳ繝ｻ・ｸ・ｲ郢ｧ繝ｻﾎ滄Δ譏ｴ繝ｻ郢晢ｽｨ驛｢譎｢・ｽ・ｯ驛｢譎｢・ｽ・ｼ驛｢・ｧ繝ｻ・ｯ髫ｰ證ｦ・ｽ・･鬩搾ｽｯ陞｢・ｹ・つ遶丞｣ｺ遨宣し・ｺ雋・･繝ｻ髴托ｽｴ繝ｻ・ｾ髯懶ｽ｣繝ｻ・ｴ驛｢譏ｴ繝ｻ郢晢ｽｻ驛｢・ｧ繝ｻ・ｿ鬮ｫ・ｪ繝ｻ・ｭ髯橸ｽｳ陞｢・ｹ繝ｻ蟶晢ｿ｡繝ｻ・ｺ鬮ｫ・ｱ鬮ｦ・ｪ繝ｻ・ｰ驍ｵ・ｺ繝ｻ・ｦ驍ｵ・ｺ闕ｳ蟯ｩ蜻ｳ驍ｵ・ｺ髴郁ｲｻ・ｼ讓抵ｽｸ・ｲ郢晢ｽｻ);
     });
   </script>
 </body>
