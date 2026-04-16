@@ -47,18 +47,21 @@
       display:block;width:100%;height:100%;object-fit:fill;user-select:none;
       -webkit-user-drag:none;pointer-events:none
     }
-    .marker-layer{position:absolute;inset:0;pointer-events:none}
+    .marker-layer{position:absolute;inset:0;pointer-events:none;overflow:visible}
     .marker{
-      position:absolute;width:clamp(12px, 3.5vw, 22px);height:clamp(12px, 3.5vw, 22px);
-      aspect-ratio:1 / 1;transform:translate(-50%,-50%);
-      display:block;padding:0;margin:0;appearance:none;-webkit-appearance:none;
-      background-clip:padding-box;line-height:0;
-      border-radius:50%;border:3px solid #b45309;background:rgba(245,158,11,.22);
-      box-shadow:0 1px 6px rgba(0,0,0,.12);cursor:pointer;pointer-events:auto;touch-action:manipulation
+      pointer-events:auto;cursor:pointer
     }
-    .marker.active{
-      width:30px;height:30px;border-color:#0369a1;background:rgba(14,165,233,.30);
-      box-shadow:0 0 0 5px rgba(14,165,233,.14)
+    .marker-ring{
+      fill:rgba(245,158,11,.22);stroke:#b45309;stroke-width:3;vector-effect:non-scaling-stroke
+    }
+    .marker.active .marker-ring{
+      fill:rgba(14,165,233,.30);stroke:#0369a1
+    }
+    .marker-halo{
+      fill:none;stroke:rgba(14,165,233,.14);stroke-width:10;vector-effect:non-scaling-stroke;display:none
+    }
+    .marker.active .marker-halo{
+      display:block
     }
     .info-row{display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -186,7 +189,7 @@
         <div class="plan-content" id="planContent">
           <div class="plan-stage" id="planStage">
             <img class="plan-img" id="planImage" alt="KEY PLAN">
-            <div class="marker-layer" id="markerLayer"></div>
+            <svg class="marker-layer" id="markerLayer" aria-hidden="true"></svg>
           </div>
         </div>
       </div>
@@ -567,18 +570,38 @@
     function renderMarkers(){
       markerLayer.innerHTML = "";
       if (!planMetrics.width || !planMetrics.height) return;
-      currentDrawing.positions.forEach(pos => {
-        const left = planMetrics.width * pos.x;
-        const top = planMetrics.height * pos.y;
+      markerLayer.setAttribute("viewBox", `0 0 ${planMetrics.width} ${planMetrics.height}`);
+      markerLayer.setAttribute("width", planMetrics.width);
+      markerLayer.setAttribute("height", planMetrics.height);
 
-        const marker = document.createElement("button");
-        marker.className = "marker" + (selected && selected.id === pos.id ? " active" : "");
-        marker.style.left = left + "px";
-        marker.style.top = top + "px";
-        marker.type = "button";
-        marker.onclick = async () => {
+      const markerRadius = 9;
+      const activeRadius = 12;
+      const svgNs = "http://www.w3.org/2000/svg";
+
+      currentDrawing.positions.forEach(pos => {
+        const cx = planMetrics.width * pos.x;
+        const cy = planMetrics.height * pos.y;
+        const isActive = selected && selected.id === pos.id;
+
+        const marker = document.createElementNS(svgNs, "g");
+        marker.setAttribute("class", "marker" + (isActive ? " active" : ""));
+        marker.setAttribute("transform", `translate(${cx} ${cy})`);
+
+        const halo = document.createElementNS(svgNs, "circle");
+        halo.setAttribute("class", "marker-halo");
+        halo.setAttribute("r", activeRadius + 5);
+
+        const ring = document.createElementNS(svgNs, "circle");
+        ring.setAttribute("class", "marker-ring");
+        ring.setAttribute("r", isActive ? activeRadius : markerRadius);
+
+        marker.appendChild(halo);
+        marker.appendChild(ring);
+
+        marker.addEventListener("click", async event => {
+          event.stopPropagation();
           await selectPosition(pos);
-        };
+        });
         marker.addEventListener("pointerup", event => event.stopPropagation());
 
         markerLayer.appendChild(marker);
