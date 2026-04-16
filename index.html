@@ -217,6 +217,7 @@
       <div class="stack">
         <div class="panel-title">読めない時の手入力 / 読取状態</div>
         <input class="input" id="qrInput" placeholder="読めない時はこちらに手入力">
+        <button class="btn" id="manualJudgeBtn" type="button">照合する</button>
         <div id="cameraStatus" class="status">未起動</div>
       </div>
 
@@ -300,6 +301,7 @@
     const selectedMain = document.getElementById("selectedMain");
     const selectedSub = document.getElementById("selectedSub");
     const qrInput = document.getElementById("qrInput");
+    const manualJudgeBtn = document.getElementById("manualJudgeBtn");
     const cameraStatus = document.getElementById("cameraStatus");
     const resultBox = document.getElementById("resultBox");
     const historyCount = document.getElementById("historyCount");
@@ -625,6 +627,23 @@
       renderAll();
     }
 
+    function judgeManualInput(){
+      if (!selected){
+        alert("柱位置を選択してください。");
+        return;
+      }
+
+      const parsed = parseQrValue(qrInput.value);
+      if (!parsed){
+        alert("TYPEを入力してください。");
+        return;
+      }
+
+      const result = parsed === selected.requiredType ? "ok" : "ng";
+      applyJudgement(result, parsed);
+      renderAll();
+    }
+
     async function selectPosition(pos){
       if (!pos) return;
       const token = ++selectionFeedbackToken;
@@ -874,9 +893,14 @@
     document.getElementById("cameraOffBtn").addEventListener("click", stopCamera);
     document.getElementById("cameraCloseBtn").addEventListener("click", stopCamera);
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
+    manualJudgeBtn.addEventListener("click", judgeManualInput);
     historyToggleBtn.addEventListener("click", toggleHistoryPanel);
     clearHistoryBtn.addEventListener("click", clearCurrentSiteHistory);
-    qrInput.addEventListener("input", syncJudgementFromInput);
+    qrInput.addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      judgeManualInput();
+    });
 
     planStage.addEventListener("pointerdown", event => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
