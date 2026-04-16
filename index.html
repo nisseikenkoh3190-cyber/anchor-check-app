@@ -51,9 +51,6 @@
     .marker{
       pointer-events:auto;cursor:pointer
     }
-    .marker-hit{
-      fill:transparent;pointer-events:all
-    }
     .marker-ring{
       fill:rgba(245,158,11,.22);stroke:#b45309;stroke-width:3;vector-effect:non-scaling-stroke
     }
@@ -577,9 +574,8 @@
       markerLayer.setAttribute("width", planMetrics.width);
       markerLayer.setAttribute("height", planMetrics.height);
 
-      const markerRadius = 5;
-      const activeRadius = 6;
-      const hitRadius = 8.5;
+      const markerRadius = 7;
+      const activeRadius = 8;
       const svgNs = "http://www.w3.org/2000/svg";
 
       currentDrawing.positions.forEach(pos => {
@@ -591,10 +587,6 @@
         marker.setAttribute("class", "marker" + (isActive ? " active" : ""));
         marker.setAttribute("transform", `translate(${cx} ${cy})`);
 
-        const hit = document.createElementNS(svgNs, "circle");
-        hit.setAttribute("class", "marker-hit");
-        hit.setAttribute("r", hitRadius);
-
         const halo = document.createElementNS(svgNs, "circle");
         halo.setAttribute("class", "marker-halo");
         halo.setAttribute("r", activeRadius + 5);
@@ -603,7 +595,6 @@
         ring.setAttribute("class", "marker-ring");
         ring.setAttribute("r", isActive ? activeRadius : markerRadius);
 
-        marker.appendChild(hit);
         marker.appendChild(halo);
         marker.appendChild(ring);
 
