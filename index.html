@@ -650,6 +650,8 @@
       selected = pos;
       feedbackMarkerId = pos.id;
       latestJudgement = null;
+      qrInput.value = "";
+      cameraStatus.textContent = "未起動";
       renderAll();
 
       await new Promise(resolve => setTimeout(resolve, SELECTION_FEEDBACK_MS));
