@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -49,19 +49,10 @@
     }
     .marker-layer{position:absolute;inset:0;pointer-events:none;overflow:visible}
     .marker{
-      pointer-events:auto;cursor:pointer
+      fill:rgba(245,158,11,.28);stroke:#b45309;stroke-width:2;cursor:pointer;pointer-events:visiblePainted
     }
-    .marker-ring{
-      fill:rgba(245,158,11,.22);stroke:#b45309;stroke-width:3;vector-effect:non-scaling-stroke
-    }
-    .marker.active .marker-ring{
-      fill:rgba(14,165,233,.30);stroke:#0369a1
-    }
-    .marker-halo{
-      fill:none;stroke:rgba(14,165,233,.14);stroke-width:10;vector-effect:non-scaling-stroke;display:none
-    }
-    .marker.active .marker-halo{
-      display:block
+    .marker.active{
+      fill:rgba(14,165,233,.34);stroke:#0369a1
     }
     .info-row{display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -267,6 +258,11 @@
     let currentDrawingId = "";
     let currentDrawing = null;
     let historyKey = "";
+
+    const MARKER_RADIUS = 6;
+    const BASE_HIT_RADIUS = 14;
+    const NEIGHBOR_LIMIT_RATIO = 0.45;
+    const TAP_MOVE_THRESHOLD = 10;
 
     let selected = null;
     let history = [];
@@ -535,29 +531,64 @@
     function getPlanPointFromEvent(event){
       if (!planMetrics.width || !planMetrics.height) return null;
       const stageRect = planStage.getBoundingClientRect();
-      const localX = (event.clientX - stageRect.left) * (planMetrics.width / stageRect.width);
-      const localY = (event.clientY - stageRect.top) * (planMetrics.height / stageRect.height);
+      if (!stageRect.width || !stageRect.height) return null;
+
       return {
-        x: localX / planMetrics.width,
-        y: localY / planMetrics.height
+        x: (event.clientX - stageRect.left) * (planMetrics.width / stageRect.width),
+        y: (event.clientY - stageRect.top) * (planMetrics.height / stageRect.height)
       };
     }
 
+    function getPositionPoint(pos){
+      return {
+        x: planMetrics.width * pos.x,
+        y: planMetrics.height * pos.y
+      };
+    }
+
+    function getPointDistance(a, b){
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function calcSafeHitRadius(target, positions, baseHitRadius = BASE_HIT_RADIUS){
+      if (!planMetrics.width || !planMetrics.height) return baseHitRadius;
+
+      const targetPoint = getPositionPoint(target);
+      let nearestNeighborDistance = Infinity;
+
+      positions.forEach(pos => {
+        if (pos.id === target.id) return;
+        const distance = getPointDistance(targetPoint, getPositionPoint(pos));
+        if (distance < nearestNeighborDistance){
+          nearestNeighborDistance = distance;
+        }
+      });
+
+      if (!Number.isFinite(nearestNeighborDistance)){
+        return baseHitRadius;
+      }
+
+      return Math.min(baseHitRadius, nearestNeighborDistance * NEIGHBOR_LIMIT_RATIO);
+    }
+
     function findNearestPosition(point){
-      if (!point) return null;
-      const stageRect = planStage.getBoundingClientRect();
+      if (!point || !currentDrawing?.positions?.length) return null;
+
       let nearest = null;
       let nearestDistance = Infinity;
+
       currentDrawing.positions.forEach(pos => {
-        const dx = (point.x - pos.x) * stageRect.width;
-        const dy = (point.y - pos.y) * stageRect.height;
-        const distance = Math.hypot(dx, dy);
+        const distance = getPointDistance(point, getPositionPoint(pos));
         if (distance < nearestDistance){
           nearest = pos;
           nearestDistance = distance;
         }
       });
-      return nearestDistance <= 32 ? nearest : null;
+
+      if (!nearest) return null;
+
+      const safeHitRadius = calcSafeHitRadius(nearest, currentDrawing.positions);
+      return nearestDistance <= safeHitRadius ? nearest : null;
     }
 
     async function selectPosition(pos){
@@ -574,8 +605,6 @@
       markerLayer.setAttribute("width", planMetrics.width);
       markerLayer.setAttribute("height", planMetrics.height);
 
-      const markerRadius = 7;
-      const activeRadius = 8;
       const svgNs = "http://www.w3.org/2000/svg";
 
       currentDrawing.positions.forEach(pos => {
@@ -583,26 +612,11 @@
         const cy = planMetrics.height * pos.y;
         const isActive = selected && selected.id === pos.id;
 
-        const marker = document.createElementNS(svgNs, "g");
+        const marker = document.createElementNS(svgNs, "circle");
         marker.setAttribute("class", "marker" + (isActive ? " active" : ""));
-        marker.setAttribute("transform", `translate(${cx} ${cy})`);
-
-        const halo = document.createElementNS(svgNs, "circle");
-        halo.setAttribute("class", "marker-halo");
-        halo.setAttribute("r", activeRadius + 5);
-
-        const ring = document.createElementNS(svgNs, "circle");
-        ring.setAttribute("class", "marker-ring");
-        ring.setAttribute("r", isActive ? activeRadius : markerRadius);
-
-        marker.appendChild(halo);
-        marker.appendChild(ring);
-
-        marker.addEventListener("click", async event => {
-          event.stopPropagation();
-          await selectPosition(pos);
-        });
-        marker.addEventListener("pointerup", event => event.stopPropagation());
+        marker.setAttribute("cx", cx);
+        marker.setAttribute("cy", cy);
+        marker.setAttribute("r", MARKER_RADIUS);
 
         markerLayer.appendChild(marker);
       });
@@ -813,9 +827,9 @@
       gestureMoved = false;
     });
     planStage.addEventListener("pointerup", async event => {
-      if (!tapStart || event.target.closest(".marker")) return;
+      if (!tapStart) return;
       const moveDistance = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
-      const isTap = moveDistance < 10 && !gestureMoved;
+      const isTap = moveDistance < TAP_MOVE_THRESHOLD && !gestureMoved;
       tapStart = null;
       if (!isTap) return;
       const nearest = findNearestPosition(getPlanPointFromEvent(event));
