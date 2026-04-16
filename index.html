@@ -49,9 +49,9 @@
     }
     .marker-layer{position:absolute;inset:0;pointer-events:none}
     .marker{
-      position:absolute;width:3.5vw;height:3.5vw;transform:translate(-50%,-50%);
-      min-width:12px;min-height:12px;max-width:22px;max-height:22px;
-      border-radius:999px;border:3px solid #b45309;background:rgba(245,158,11,.22);
+      position:absolute;width:clamp(12px, 3.5vw, 22px);height:clamp(12px, 3.5vw, 22px);
+      aspect-ratio:1 / 1;transform:translate(-50%,-50%);
+      border-radius:50%;border:3px solid #b45309;background:rgba(245,158,11,.22);
       box-shadow:0 1px 6px rgba(0,0,0,.12);cursor:pointer;pointer-events:auto;touch-action:manipulation
     }
     .marker.active{
