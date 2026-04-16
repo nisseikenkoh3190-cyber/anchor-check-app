@@ -605,8 +605,6 @@
       await new Promise(resolve => setTimeout(resolve, SELECTION_FEEDBACK_MS));
       if (token !== selectionFeedbackToken) return;
 
-      feedbackMarkerId = "";
-      renderAll();
       await startCamera();
     }
 
