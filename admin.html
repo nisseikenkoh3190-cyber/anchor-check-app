@@ -11,9 +11,16 @@
     h1{margin:0 0 12px} h2{margin:0 0 10px;font-size:20px}
     .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;text-decoration:none;cursor:pointer;font-size:14px;font-weight:700}
     .btn.primary{background:#0f172a;color:#fff;border-color:#0f172a}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:12px}
+    .field{display:grid;gap:6px}
+    .label{font-size:12px;color:#475569;font-weight:700}
+    .select{width:100%;min-height:44px;border:1px solid #cbd5e1;border-radius:12px;padding:0 12px;background:#fff;font-size:14px}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}
     .muted{color:#475569;font-size:13px}
+    @media (max-width:720px){
+      .controls{grid-template-columns:1fr}
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -21,9 +28,19 @@
   <div class="wrap">
     <div class="card">
       <h1>管理画面</h1>
-      <div class="muted">CSVの空行問題を避けるため、Excel形式（.xlsx）で直接出力する版です。</div>
+      <div class="muted">現場と図面を選択してから現場画面へ移動してください。</div>
+      <div class="controls">
+        <label class="field">
+          <span class="label">現場選択</span>
+          <select class="select" id="siteSelector"></select>
+        </label>
+        <label class="field">
+          <span class="label">図面選択</span>
+          <select class="select" id="drawingSelector"></select>
+        </label>
+        <button class="btn primary" id="goFieldBtn" type="button">現場画面へ移動</button>
+      </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-        <a class="btn" id="backLink" href="index.html">現場画面へ戻る</a>
         <button class="btn primary" id="xlsxBtn">Excel出力</button>
         <button class="btn" id="clearBtn">履歴クリア</button>
       </div>
@@ -35,17 +52,129 @@
   </div>
 
   <script>
-    const requestedTitle = new URLSearchParams(location.search).get("TITLE");
-    const currentTitle = requestedTitle || "sampleA";
-    const historyKey = `history_${currentTitle}`;
+    const SITE_DATA_URL = "sites.json";
+    let sites = [];
+    let currentSite = null;
+    let currentDrawing = null;
+
+    const siteSelector = document.getElementById("siteSelector");
+    const drawingSelector = document.getElementById("drawingSelector");
+    const goFieldBtn = document.getElementById("goFieldBtn");
+
+    function normalizePositionRecord(position) {
+      const id = String(position?.id || "").trim();
+      const displayName = String(position?.displayName || "").trim();
+      const gridX = String(position?.gridX || "").trim();
+      const gridY = String(position?.gridY || "").trim();
+      const label = String(position?.label || "").trim();
+      const requiredType = String(position?.requiredType || "").trim();
+      const x = Number(position?.x);
+      const y = Number(position?.y);
+      if (!id || !displayName || !requiredType) return null;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+      return { id, displayName, gridX, gridY, label, requiredType, x, y };
+    }
+
+    function normalizeDrawingRecord(drawing) {
+      const drawingId = String(drawing?.drawingId || "").trim();
+      const drawingName = String(drawing?.drawingName || "").trim();
+      const image = String(drawing?.image || "").trim();
+      const positions = Array.isArray(drawing?.positions)
+        ? drawing.positions.map(normalizePositionRecord).filter(Boolean)
+        : [];
+      return { drawingId, drawingName, image, positions };
+    }
+
+    function normalizeSiteRecord(site) {
+      const title = String(site?.title || "").trim();
+      const siteId = String(site?.siteId || title).trim();
+      const siteName = String(site?.siteName || "").trim();
+      const drawings = Array.isArray(site?.drawings)
+        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.image)
+        : [];
+      const defaultDrawingId = String(site?.defaultDrawingId || drawings[0]?.drawingId || "").trim();
+      return { siteId, title, siteName, defaultDrawingId, drawings };
+    }
+
+    async function loadSitesData() {
+      const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
+      const rawSites = await response.json();
+      if (!Array.isArray(rawSites)) throw new Error(`${SITE_DATA_URL} is invalid.`);
+      const normalized = rawSites.map(normalizeSiteRecord).filter(site => site.title && site.drawings.length);
+      if (!normalized.length) throw new Error(`${SITE_DATA_URL} does not contain any valid site records.`);
+      return normalized;
+    }
+
+    function getHistoryKey() {
+      return `history_${currentSite.siteId}_${currentDrawing.drawingId}`;
+    }
+
+    function getLegacyHistoryKeys() {
+      return [
+        `history_${currentSite.siteId}`,
+        `history_${currentSite.title}`
+      ];
+    }
 
     function loadRows() {
-      try { return JSON.parse(localStorage.getItem(historyKey) || "[]"); }
-      catch { return []; }
+      try {
+        let rows = JSON.parse(localStorage.getItem(getHistoryKey()) || "[]");
+        if (!rows.length) {
+          for (const key of getLegacyHistoryKeys()) {
+            rows = JSON.parse(localStorage.getItem(key) || "[]");
+            if (rows.length) break;
+          }
+        }
+        return rows;
+      } catch {
+        return [];
+      }
     }
 
     function sanitizeValue(v) {
       return String(v ?? "").replace(/[\r\n]+/g, " ").trim();
+    }
+
+    function populateSiteSelector() {
+      siteSelector.innerHTML = sites
+        .map(site => `<option value="${site.title}">${sanitizeValue(site.siteName)}</option>`)
+        .join("");
+      siteSelector.value = currentSite.title;
+    }
+
+    function populateDrawingSelector() {
+      drawingSelector.innerHTML = currentSite.drawings
+        .map(drawing => `<option value="${drawing.drawingId}">${sanitizeValue(drawing.drawingName)}</option>`)
+        .join("");
+      drawingSelector.value = currentDrawing.drawingId;
+    }
+
+    function setCurrentSite(title) {
+      currentSite = sites.find(site => site.title === title) || sites[0];
+    }
+
+    function setCurrentDrawing(drawingId) {
+      currentDrawing = currentSite.drawings.find(drawing => drawing.drawingId === drawingId)
+        || currentSite.drawings.find(drawing => drawing.drawingId === currentSite.defaultDrawingId)
+        || currentSite.drawings[0];
+    }
+
+    function syncQuery() {
+      const params = new URLSearchParams({
+        TITLE: currentSite.title,
+        DRAWING: currentDrawing.drawingId
+      });
+      history.replaceState(null, "", `admin.html?${params.toString()}`);
+    }
+
+    function goToFieldScreen() {
+      const params = new URLSearchParams({
+        TITLE: currentSite.title,
+        DRAWING: currentDrawing.drawingId
+      });
+      location.href = `index.html?${params.toString()}`;
     }
 
     function render() {
@@ -55,10 +184,10 @@
       wrap.innerHTML = `
         <table>
           <thead>
-            <tr><th>時刻</th><th>位置</th><th>柱種別</th><th>要求TYPE</th><th>読取TYPE</th><th>判定</th></tr>
+            <tr><th>時刻</th><th>位置</th><th>要求TYPE</th><th>読取TYPE</th><th>判定</th></tr>
           </thead>
           <tbody>
-            ${rows.map(r => `<tr><td>${sanitizeValue(r.time)}</td><td>${sanitizeValue(r.pos)}</td><td>${sanitizeValue(r.label)}</td><td>${sanitizeValue(r.requiredType)}</td><td>${sanitizeValue(r.scannedType)}</td><td>${r.result === "ok" ? "適合" : "不一致"}</td></tr>`).join("")}
+            ${rows.map(r => `<tr><td>${sanitizeValue(r.time)}</td><td>${sanitizeValue(r.displayName || r.pos)}</td><td>${sanitizeValue(r.requiredType)}</td><td>${sanitizeValue(r.scannedType)}</td><td>${r.result === "ok" ? "適合" : "不一致"}</td></tr>`).join("")}
           </tbody>
         </table>`;
     }
@@ -72,11 +201,10 @@
       }
 
       const data = [
-        ["時刻","位置","柱種別","要求TYPE","読取TYPE","判定"],
+        ["時刻","位置","要求TYPE","読取TYPE","判定"],
         ...rows.map(r => [
           sanitizeValue(r.time),
-          sanitizeValue(r.pos),
-          sanitizeValue(r.label),
+          sanitizeValue(r.displayName || r.pos),
           sanitizeValue(r.requiredType),
           sanitizeValue(r.scannedType),
           r.result === "ok" ? "適合" : "不一致"
@@ -88,25 +216,60 @@
 
       ws["!cols"] = [
         { wch: 22 },
-        { wch: 12 },
-        { wch: 10 },
+        { wch: 24 },
         { wch: 18 },
         { wch: 18 },
         { wch: 10 }
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, "判定履歴");
-      XLSX.writeFile(wb, `anchor_bolt_history_${currentTitle}.xlsx`);
+      XLSX.writeFile(wb, `anchor_bolt_history_${currentSite.siteId}_${currentDrawing.drawingId}.xlsx`);
     }
 
-    document.getElementById("backLink").href = `index.html?TITLE=${encodeURIComponent(currentTitle)}`;
+    function handleSiteChange() {
+      setCurrentSite(siteSelector.value);
+      setCurrentDrawing(currentSite.defaultDrawingId);
+      populateDrawingSelector();
+      syncQuery();
+      render();
+    }
+
+    function handleDrawingChange() {
+      setCurrentDrawing(drawingSelector.value);
+      syncQuery();
+      render();
+    }
+
+    async function initializeAdmin() {
+      sites = await loadSitesData();
+
+      const params = new URLSearchParams(location.search);
+      const requestedTitle = params.get("TITLE");
+      setCurrentSite(sites.find(site => site.title === requestedTitle)?.title || sites[0].title);
+
+      const requestedDrawingId = params.get("DRAWING");
+      setCurrentDrawing(requestedDrawingId || currentSite.defaultDrawingId);
+
+      populateSiteSelector();
+      populateDrawingSelector();
+      syncQuery();
+      render();
+    }
+
     document.getElementById("xlsxBtn").addEventListener("click", exportXlsx);
     document.getElementById("clearBtn").addEventListener("click", () => {
       if (!confirm("履歴を削除しますか？")) return;
-      localStorage.removeItem(historyKey);
+      localStorage.removeItem(getHistoryKey());
       render();
     });
-    render();
+    siteSelector.addEventListener("change", handleSiteChange);
+    drawingSelector.addEventListener("change", handleDrawingChange);
+    goFieldBtn.addEventListener("click", goToFieldScreen);
+
+    initializeAdmin().catch(error => {
+      console.error(error);
+      alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
+    });
   </script>
 </body>
 </html>

@@ -178,8 +178,8 @@
   <div class="app">
     <div class="topbar">
       <div>
-        <div class="title" id="pageTitle">アンカーボルト照合アプリ / 現場画面</div>
-        <div class="meta" id="pageMeta">現場: サンプル現場A / 図面: 251210基礎ハイベース設置図</div>
+        <div class="title" id="pageTitle">サンプル現場A</div>
+        <div class="meta" id="pageMeta">251210基礎ハイベース設置図</div>
       </div>
     </div>
 
@@ -225,7 +225,7 @@
           <button class="btn primary" id="cameraOnBtn">カメラ起動</button>
           <button class="btn" id="cameraOffBtn">カメラOFF</button>
         </div>
-        <a class="link-btn" id="adminLink" href="admin.html">管理画面</a>
+        <a class="link-btn" id="adminLink" href="admin.html">管理画面へもどる</a>
       </div>
     </div>
 
@@ -263,6 +263,8 @@
     let sites = {};
     let currentTitle = "";
     let currentSite = null;
+    let currentDrawingId = "";
+    let currentDrawing = null;
     let historyKey = "";
 
     let selected = null;
@@ -303,32 +305,46 @@
 
     function normalizePositionRecord(position){
       const id = String(position?.id || "").trim();
+      const displayName = String(position?.displayName || "").trim();
+      const gridX = String(position?.gridX || "").trim();
+      const gridY = String(position?.gridY || "").trim();
       const label = String(position?.label || "").trim();
       const requiredType = String(position?.requiredType || "").trim();
       const x = Number(position?.x);
       const y = Number(position?.y);
 
-      if (!id || !label || !requiredType) return null;
+      if (!id || !displayName || !requiredType) return null;
       if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
       if (x < 0 || x > 1 || y < 0 || y > 1) return null;
 
-      return { id, label, requiredType, x, y };
+      return { id, displayName, gridX, gridY, label, requiredType, x, y };
+    }
+
+    function normalizeDrawingRecord(drawing){
+      const drawingId = String(drawing?.drawingId || "").trim();
+      const drawingName = String(drawing?.drawingName || "").trim();
+      const image = String(drawing?.image || "").trim();
+      const positions = Array.isArray(drawing?.positions)
+        ? drawing.positions.map(normalizePositionRecord).filter(Boolean)
+        : [];
+
+      return { drawingId, drawingName, image, positions };
     }
 
     function normalizeSiteRecord(site){
       const title = String(site?.title || "").trim();
       const siteId = String(site?.siteId || title).trim();
-      const positions = Array.isArray(site?.positions)
-        ? site.positions.map(normalizePositionRecord).filter(Boolean)
+      const drawings = Array.isArray(site?.drawings)
+        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.image)
         : [];
+      const defaultDrawingId = String(site?.defaultDrawingId || drawings[0]?.drawingId || "").trim();
 
       return {
         siteId,
         title,
         siteName: String(site?.siteName || "").trim(),
-        drawingName: String(site?.drawingName || "").trim(),
-        image: String(site?.image || "").trim(),
-        positions
+        defaultDrawingId,
+        drawings
       };
     }
 
@@ -346,7 +362,7 @@
       const nextSites = {};
       rawSites.forEach(rawSite => {
         const site = normalizeSiteRecord(rawSite);
-        if (!site.title) return;
+        if (!site.title || !site.drawings.length) return;
         nextSites[site.title] = site;
       });
 
@@ -363,13 +379,36 @@
       return nextSites[requestedTitle] ? requestedTitle : defaultTitle;
     }
 
+    function resolveInitialDrawingId(site){
+      const requestedDrawingId = new URLSearchParams(location.search).get("DRAWING");
+      const hasRequested = site.drawings.some(drawing => drawing.drawingId === requestedDrawingId);
+      if (hasRequested) return requestedDrawingId;
+      const hasDefault = site.drawings.some(drawing => drawing.drawingId === site.defaultDrawingId);
+      return hasDefault ? site.defaultDrawingId : site.drawings[0].drawingId;
+    }
+
     function setCurrentSite(title){
       currentTitle = title;
       currentSite = sites[title];
-      historyKey = `history_${currentSite.siteId}`;
     }
 
+    function setCurrentDrawing(drawingId){
+      currentDrawingId = drawingId;
+      currentDrawing = currentSite.drawings.find(drawing => drawing.drawingId === drawingId) || currentSite.drawings[0];
+      currentDrawingId = currentDrawing.drawingId;
+      historyKey = `history_${currentSite.siteId}_${currentDrawingId}`;
+    }
 
+    function loadDrawing(){
+      selected = null;
+      document.title = `${currentSite.siteName} ${currentDrawing.drawingName}`;
+      pageTitle.textContent = currentSite.siteName;
+      pageMeta.textContent = currentDrawing.drawingName;
+      planImage.src = currentDrawing.image;
+      adminLink.href = `admin.html?TITLE=${encodeURIComponent(currentSite.title)}&DRAWING=${encodeURIComponent(currentDrawingId)}`;
+      resetViewTransform();
+      resetGestureTracking();
+    }
 
     function applyContentTransform(){
       planContent.style.transform = `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`;
@@ -378,17 +417,6 @@
     function resetViewTransform(){
       viewTransform = { x: 0, y: 0, scale: 1 };
       applyContentTransform();
-    }
-
-    function loadSite(site){
-      selected = null;
-      document.title = `アンカーボルト照合アプリ ${site.title}`;
-      pageTitle.textContent = `アンカーボルト照合アプリ / ${site.title}`;
-      pageMeta.textContent = `現場: ${site.siteName} / 図面: ${site.drawingName}`;
-      planImage.src = site.image;
-      adminLink.href = `admin.html?TITLE=${encodeURIComponent(site.title)}`;
-      resetViewTransform();
-      resetGestureTracking();
     }
 
     function recoverPanzoomAfterCamera(){
@@ -519,7 +547,7 @@
       const stageRect = planStage.getBoundingClientRect();
       let nearest = null;
       let nearestDistance = Infinity;
-      currentSite.positions.forEach(pos => {
+      currentDrawing.positions.forEach(pos => {
         const dx = (point.x - pos.x) * stageRect.width;
         const dy = (point.y - pos.y) * stageRect.height;
         const distance = Math.hypot(dx, dy);
@@ -541,7 +569,7 @@
     function renderMarkers(){
       markerLayer.innerHTML = "";
       if (!planMetrics.width || !planMetrics.height) return;
-      currentSite.positions.forEach(pos => {
+      currentDrawing.positions.forEach(pos => {
         const left = planMetrics.width * pos.x;
         const top = planMetrics.height * pos.y;
 
@@ -559,7 +587,7 @@
         label.className = "marker-label";
         label.style.left = left + "px";
         label.style.top = top + "px";
-        label.textContent = pos.label;
+        label.textContent = pos.displayName;
 
         markerLayer.appendChild(marker);
         markerLayer.appendChild(label);
@@ -571,7 +599,7 @@
         selectedMain.textContent = "未選択";
         selectedSub.textContent = "";
       } else {
-        selectedMain.textContent = `${selected.id} / ${selected.label}`;
+        selectedMain.textContent = selected.displayName;
         selectedSub.textContent = "";
       }
     }
@@ -617,7 +645,7 @@
 
         const badgeClass = entry.result === "ok" ? "ok" : "ng";
         const badgeText = entry.result === "ok" ? "OK" : "NG";
-        const positionText = entry.label ? `${entry.label} / ${entry.pos}` : entry.pos;
+        const positionText = entry.displayName || entry.pos || "-";
 
         item.innerHTML = `
           <div class="history-item-top">
@@ -718,6 +746,7 @@
       history.unshift({
         time: new Date().toISOString().slice(0,19).replace("T"," "),
         pos: selected.id,
+        displayName: selected.displayName,
         label: selected.label,
         requiredType: selected.requiredType,
         scannedType: parsed,
@@ -729,11 +758,18 @@
     }
 
     function loadHistory(){
-      const legacyHistoryKey = currentSite?.title ? `history_${currentSite.title}` : "";
+      const legacyHistoryKeys = [
+        currentSite?.siteId ? `history_${currentSite.siteId}` : "",
+        currentSite?.title ? `history_${currentSite.title}` : ""
+      ].filter(Boolean);
       try{
         history = JSON.parse(localStorage.getItem(historyKey) || "[]");
-        if (!history.length && legacyHistoryKey && legacyHistoryKey !== historyKey){
-          history = JSON.parse(localStorage.getItem(legacyHistoryKey) || "[]");
+        if (!history.length){
+          for (const legacyHistoryKey of legacyHistoryKeys){
+            if (legacyHistoryKey === historyKey) continue;
+            history = JSON.parse(localStorage.getItem(legacyHistoryKey) || "[]");
+            if (history.length) break;
+          }
         }
       } catch {
         history = [];
@@ -743,7 +779,8 @@
     async function initializeApp(){
       sites = await loadSitesData();
       setCurrentSite(resolveInitialTitle(sites));
-      loadSite(currentSite);
+      setCurrentDrawing(resolveInitialDrawingId(currentSite));
+      loadDrawing();
       loadHistory();
       syncPlanViewport(true);
       renderAll();
