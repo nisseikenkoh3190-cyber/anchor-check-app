@@ -51,7 +51,7 @@
     .marker{
       fill:rgba(245,158,11,.28);stroke:#b45309;stroke-width:2;cursor:pointer;pointer-events:visiblePainted
     }
-    .marker.active{
+    .marker.feedback{
       fill:rgba(14,165,233,.34);stroke:#0369a1
     }
     .info-row{display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
@@ -263,8 +263,12 @@
     const BASE_HIT_RADIUS = 14;
     const NEIGHBOR_LIMIT_RATIO = 0.45;
     const TAP_MOVE_THRESHOLD = 10;
+    const SELECTION_FEEDBACK_MS = 200;
+    const SELECTION_FEEDBACK_SCALE = 1.2;
 
     let selected = null;
+    let feedbackMarkerId = "";
+    let selectionFeedbackToken = 0;
     let history = [];
     let videoStream = null;
     let scanTimer = null;
@@ -593,7 +597,15 @@
 
     async function selectPosition(pos){
       if (!pos) return;
+      const token = ++selectionFeedbackToken;
       selected = pos;
+      feedbackMarkerId = pos.id;
+      renderAll();
+
+      await new Promise(resolve => setTimeout(resolve, SELECTION_FEEDBACK_MS));
+      if (token !== selectionFeedbackToken) return;
+
+      feedbackMarkerId = "";
       renderAll();
       await startCamera();
     }
@@ -610,13 +622,13 @@
       currentDrawing.positions.forEach(pos => {
         const cx = planMetrics.width * pos.x;
         const cy = planMetrics.height * pos.y;
-        const isActive = selected && selected.id === pos.id;
+        const isFeedback = feedbackMarkerId === pos.id;
 
         const marker = document.createElementNS(svgNs, "circle");
-        marker.setAttribute("class", "marker" + (isActive ? " active" : ""));
+        marker.setAttribute("class", "marker" + (isFeedback ? " feedback" : ""));
         marker.setAttribute("cx", cx);
         marker.setAttribute("cy", cy);
-        marker.setAttribute("r", MARKER_RADIUS);
+        marker.setAttribute("r", isFeedback ? MARKER_RADIUS * SELECTION_FEEDBACK_SCALE : MARKER_RADIUS);
 
         markerLayer.appendChild(marker);
       });
