@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>配置管理ツール</title>
+  <title>管理画面</title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -12,9 +12,6 @@
       --text: #0f172a;
       --muted: #475569;
       --accent: #0f172a;
-      --accent-soft: #e2e8f0;
-      --point: #ef4444;
-      --point-active: #2563eb;
     }
 
     * { box-sizing: border-box; }
@@ -25,7 +22,7 @@
       color: var(--text);
     }
     .wrap {
-      max-width: 1180px;
+      max-width: 960px;
       margin: 0 auto;
       padding: 20px;
     }
@@ -36,23 +33,18 @@
       padding: 16px;
       margin-bottom: 16px;
     }
-    h1, h2, h3 { margin: 0; }
+    h1, h2 { margin: 0; }
     h1 { font-size: 28px; margin-bottom: 10px; }
     h2 { font-size: 20px; margin-bottom: 12px; }
-    h3 { font-size: 16px; margin-bottom: 8px; }
-    .muted { color: var(--muted); font-size: 13px; }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
     .controls {
       display: grid;
-      grid-template-columns: 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 12px;
-      align-items: end;
-    }
-    .planner-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
-      gap: 16px;
-      align-items: start;
     }
     .field {
       display: grid;
@@ -63,22 +55,15 @@
       color: var(--muted);
       font-weight: 700;
     }
-    .input, .select, .textarea {
+    .select {
       width: 100%;
       min-height: 44px;
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 10px 12px;
+      padding: 0 12px;
       background: #fff;
       color: var(--text);
       font: inherit;
-    }
-    .textarea {
-      min-height: 200px;
-      resize: vertical;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 13px;
-      line-height: 1.5;
     }
     .btn-row {
       display: flex;
@@ -106,115 +91,6 @@
       color: #fff;
       border-color: var(--accent);
     }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .canvas-wrap {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: auto;
-      background:
-        linear-gradient(45deg, #f8fafc 25%, transparent 25%),
-        linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #f8fafc 75%),
-        linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
-      background-size: 24px 24px;
-      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
-    }
-    .plan-stage {
-      position: relative;
-      display: inline-block;
-      vertical-align: top;
-      line-height: 0;
-      user-select: none;
-      touch-action: none;
-    }
-    .plan-image {
-      display: block;
-      max-width: none;
-    }
-    .point-layer {
-      position: absolute;
-      inset: 0;
-    }
-    .point {
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      margin-left: -9px;
-      margin-top: -9px;
-      border-radius: 999px;
-      border: 2px solid #fff;
-      background: var(--point);
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.25);
-      cursor: grab;
-    }
-    .point.active {
-      background: var(--point-active);
-      transform: scale(1.12);
-    }
-    .point-label {
-      position: absolute;
-      top: -26px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.86);
-      color: #fff;
-      font-size: 11px;
-      line-height: 1.4;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    .side-panel {
-      display: grid;
-      gap: 16px;
-    }
-    .point-list {
-      display: grid;
-      gap: 8px;
-      max-height: 320px;
-      overflow: auto;
-    }
-    .point-item {
-      display: grid;
-      gap: 4px;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-      cursor: pointer;
-    }
-    .point-item.active {
-      border-color: var(--point-active);
-      box-shadow: inset 0 0 0 1px var(--point-active);
-      background: #eff6ff;
-    }
-    .point-item-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .point-item-meta {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .empty {
-      padding: 16px;
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .status {
-      min-height: 20px;
-      font-size: 13px;
-      color: var(--muted);
-    }
     .history-table {
       width: 100%;
       border-collapse: collapse;
@@ -227,11 +103,10 @@
       text-align: left;
       vertical-align: top;
     }
-    @media (max-width: 960px) {
-      .planner-layout { grid-template-columns: 1fr; }
-    }
     @media (max-width: 720px) {
-      .controls { grid-template-columns: 1fr; }
+      .controls {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -239,8 +114,8 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>配置管理ツール</h1>
-      <div class="muted">図面を選んで、点の配置確認や positions.json の準備を行います。</div>
+      <h1>管理画面</h1>
+      <div class="muted">現場と図面を選択して、現場運用画面または配置編集画面へ移動できます。</div>
       <div class="controls">
         <label class="field">
           <span class="label">現場選択</span>
@@ -250,60 +125,12 @@
           <span class="label">図面選択</span>
           <select class="select" id="drawingSelector"></select>
         </label>
-        <button class="btn primary" id="goFieldBtn" type="button">現場画面へ</button>
       </div>
       <div class="btn-row">
-        <button class="btn primary" id="jsonBtn" type="button">JSON出力</button>
-        <button class="btn" id="resetPositionsBtn" type="button">点データ初期化</button>
+        <button class="btn primary" id="goFieldBtn" type="button">現場画面へ</button>
+        <button class="btn" id="goEditorBtn" type="button">配置編集へ</button>
         <button class="btn" id="xlsxBtn" type="button">Excel出力</button>
         <button class="btn" id="clearBtn" type="button">履歴クリア</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>キープラン編集</h2>
-      <div class="muted">画像上をクリックで点を追加できます。点はドラッグで移動し、右側で ID と spec を編集できます。</div>
-      <div class="planner-layout" style="margin-top:12px;">
-        <div>
-          <div class="canvas-wrap">
-            <div class="plan-stage" id="planStage">
-              <img id="planImage" class="plan-image" alt="keyplan" />
-              <div class="point-layer" id="pointLayer"></div>
-            </div>
-          </div>
-          <div class="status" id="saveStatus"></div>
-        </div>
-        <div class="side-panel">
-          <div>
-            <h3>選択中の点</h3>
-            <div id="editorEmpty" class="empty">点を追加または選択してください。</div>
-            <div id="pointEditor" style="display:none;">
-              <label class="field">
-                <span class="label">ID</span>
-                <input class="input" id="pointIdInput" type="text" />
-              </label>
-              <label class="field" style="margin-top:10px;">
-                <span class="label">spec</span>
-                <input class="input" id="pointSpecInput" type="text" placeholder="EB350-4-30" />
-              </label>
-              <label class="field" style="margin-top:10px;">
-                <span class="label">X / Y</span>
-                <div class="muted" id="pointCoordText">-</div>
-              </label>
-              <div class="btn-row">
-                <button class="btn" id="deletePointBtn" type="button">選択点を削除</button>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h3>点一覧</h3>
-            <div id="pointList" class="point-list"></div>
-          </div>
-          <div>
-            <h3>出力プレビュー</h3>
-            <textarea id="jsonPreview" class="textarea" spellcheck="false" readonly></textarea>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -315,33 +142,15 @@
 
   <script>
     const SITE_DATA_URL = "./sites.json";
-    const DEFAULT_SPEC = "EB350-4-30";
 
     let sites = [];
     let currentSite = null;
     let currentDrawing = null;
-    let plannerPoints = [];
-    let selectedPointId = null;
-    let dragState = null;
-    let lastDragEndedAt = 0;
 
     const siteSelector = document.getElementById("siteSelector");
     const drawingSelector = document.getElementById("drawingSelector");
     const goFieldBtn = document.getElementById("goFieldBtn");
-    const jsonBtn = document.getElementById("jsonBtn");
-    const resetPositionsBtn = document.getElementById("resetPositionsBtn");
-    const planStage = document.getElementById("planStage");
-    const planImage = document.getElementById("planImage");
-    const pointLayer = document.getElementById("pointLayer");
-    const pointList = document.getElementById("pointList");
-    const saveStatus = document.getElementById("saveStatus");
-    const jsonPreview = document.getElementById("jsonPreview");
-    const editorEmpty = document.getElementById("editorEmpty");
-    const pointEditor = document.getElementById("pointEditor");
-    const pointIdInput = document.getElementById("pointIdInput");
-    const pointSpecInput = document.getElementById("pointSpecInput");
-    const pointCoordText = document.getElementById("pointCoordText");
-    const deletePointBtn = document.getElementById("deletePointBtn");
+    const goEditorBtn = document.getElementById("goEditorBtn");
 
     function normalizeDrawingRecord(drawing) {
       const drawingId = String(drawing && drawing.drawingId || "").trim();
@@ -406,14 +215,19 @@
       ];
     }
 
-    function getPlannerStorageKey() {
-      return "planner_positions_" + currentSite.siteId + "_" + currentDrawing.drawingId;
-    }
-
-    function getDownloadedFileName() {
-      const fallbackSite = sanitizeValue(currentSite.siteId || "site");
-      const fallbackDrawing = sanitizeValue(currentDrawing.drawingId || "drawing");
-      return "positions_" + fallbackSite + "_" + fallbackDrawing + ".json";
+    function loadRows() {
+      try {
+        let rows = JSON.parse(localStorage.getItem(getHistoryKey()) || "[]");
+        if (!rows.length) {
+          for (const key of getLegacyHistoryKeys()) {
+            rows = JSON.parse(localStorage.getItem(key) || "[]");
+            if (rows.length) break;
+          }
+        }
+        return Array.isArray(rows) ? rows : [];
+      } catch (_error) {
+        return [];
+      }
     }
 
     function populateSiteSelector() {
@@ -444,35 +258,23 @@
         || currentSite.drawings[0];
     }
 
-    function syncQuery() {
-      const params = new URLSearchParams({
+    function buildQuery() {
+      return new URLSearchParams({
         SITE: currentSite.siteId,
         DRAWING: currentDrawing.drawingId
       });
-      window.history.replaceState(null, "", "admin.html?" + params.toString());
+    }
+
+    function syncQuery() {
+      window.history.replaceState(null, "", "admin.html?" + buildQuery().toString());
     }
 
     function goToFieldScreen() {
-      const params = new URLSearchParams({
-        SITE: currentSite.siteId,
-        DRAWING: currentDrawing.drawingId
-      });
-      location.href = "index.html?" + params.toString();
+      location.href = "index.html?" + buildQuery().toString();
     }
 
-    function loadRows() {
-      try {
-        let rows = JSON.parse(localStorage.getItem(getHistoryKey()) || "[]");
-        if (!rows.length) {
-          for (const key of getLegacyHistoryKeys()) {
-            rows = JSON.parse(localStorage.getItem(key) || "[]");
-            if (rows.length) break;
-          }
-        }
-        return Array.isArray(rows) ? rows : [];
-      } catch (_error) {
-        return [];
-      }
+    function goToEditorScreen() {
+      location.href = "editor.html?" + buildQuery().toString();
     }
 
     function renderHistory() {
@@ -482,6 +284,7 @@
         wrap.innerHTML = "履歴はありません";
         return;
       }
+
       wrap.innerHTML = [
         '<table class="history-table">',
         "<thead>",
@@ -538,276 +341,18 @@
       XLSX.writeFile(workbook, "anchor_bolt_history_" + currentSite.siteId + "_" + currentDrawing.drawingId + ".xlsx");
     }
 
-    function normalizePoint(point, index) {
-      const fallbackId = "p" + String(index + 1).padStart(3, "0");
-      const normalizedId = sanitizeValue(point && point.id || fallbackId) || fallbackId;
-      const x = Math.round(Number(point && point.x || 0));
-      const y = Math.round(Number(point && point.y || 0));
-      const spec = sanitizeValue(point && point.spec || DEFAULT_SPEC) || DEFAULT_SPEC;
-      return { id: normalizedId, x: x, y: y, spec: spec };
-    }
-
-    function getSelectedPoint() {
-      return plannerPoints.find(function (point) { return point.id === selectedPointId; }) || null;
-    }
-
-    function buildExportData() {
-      return plannerPoints.map(function (point) {
-        return {
-          id: point.id,
-          x: Math.round(point.x),
-          y: Math.round(point.y),
-          spec: point.spec
-        };
-      });
-    }
-
-    function updateJsonPreview() {
-      jsonPreview.value = JSON.stringify(buildExportData(), null, 2);
-    }
-
-    function setSaveStatus(message) {
-      saveStatus.textContent = message || "";
-    }
-
-    function savePlannerPoints(message) {
-      localStorage.setItem(getPlannerStorageKey(), JSON.stringify(buildExportData()));
-      updateJsonPreview();
-      setSaveStatus(message || "点データを保存しました。");
-    }
-
-    async function loadPlannerPoints() {
-      let sourcePoints = [];
-      try {
-        const stored = JSON.parse(localStorage.getItem(getPlannerStorageKey()) || "null");
-        if (Array.isArray(stored) && stored.length) {
-          sourcePoints = stored;
-        }
-      } catch (_error) {
-        sourcePoints = [];
-      }
-
-      if (!sourcePoints.length && currentDrawing.positionsFile) {
-        try {
-          const response = await fetch(currentDrawing.positionsFile, { cache: "no-store" });
-          if (response.ok) {
-            const json = await response.json();
-            if (Array.isArray(json)) {
-              sourcePoints = json;
-            }
-          }
-        } catch (_error) {
-          sourcePoints = [];
-        }
-      }
-
-      plannerPoints = sourcePoints.map(normalizePoint);
-      selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
-      updateJsonPreview();
-      renderPlanner();
-      if (sourcePoints.length) {
-        setSaveStatus("保存済みデータを読み込みました。");
-      } else {
-        setSaveStatus("画像をクリックして点を追加できます。");
-      }
-    }
-
-    function renderPointEditor() {
-      const point = getSelectedPoint();
-      if (!point) {
-        editorEmpty.style.display = "block";
-        pointEditor.style.display = "none";
-        pointIdInput.value = "";
-        pointSpecInput.value = "";
-        pointCoordText.textContent = "-";
-        return;
-      }
-
-      editorEmpty.style.display = "none";
-      pointEditor.style.display = "block";
-      pointIdInput.value = point.id;
-      pointSpecInput.value = point.spec;
-      pointCoordText.textContent = "x: " + Math.round(point.x) + " / y: " + Math.round(point.y);
-    }
-
-    function renderPointList() {
-      if (!plannerPoints.length) {
-        pointList.innerHTML = '<div class="empty">まだ点がありません。</div>';
-        return;
-      }
-
-      pointList.innerHTML = plannerPoints.map(function (point) {
-        const isActive = point.id === selectedPointId;
-        return [
-          '<button class="point-item' + (isActive ? " active" : "") + '" type="button" data-point-id="' + escapeHtml(point.id) + '">',
-          '<span class="point-item-title"><span>' + escapeHtml(point.id) + "</span><span>(" + Math.round(point.x) + ", " + Math.round(point.y) + ")</span></span>",
-          '<span class="point-item-meta">' + escapeHtml(point.spec) + "</span>",
-          "</button>"
-        ].join("");
-      }).join("");
-    }
-
-    function renderPointLayer() {
-      pointLayer.innerHTML = "";
-      plannerPoints.forEach(function (point) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "point" + (point.id === selectedPointId ? " active" : "");
-        button.dataset.pointId = point.id;
-        button.style.left = point.x + "px";
-        button.style.top = point.y + "px";
-
-        const label = document.createElement("span");
-        label.className = "point-label";
-        label.textContent = point.id;
-        button.appendChild(label);
-
-        pointLayer.appendChild(button);
-      });
-    }
-
-    function renderPlanner() {
-      renderPointLayer();
-      renderPointList();
-      renderPointEditor();
-      updateJsonPreview();
-    }
-
-    function selectPoint(pointId) {
-      selectedPointId = pointId;
-      renderPlanner();
-    }
-
-    function createNextPointId() {
-      let max = 0;
-      plannerPoints.forEach(function (point) {
-        const matched = /^p(\d+)$/i.exec(point.id);
-        if (!matched) return;
-        max = Math.max(max, Number(matched[1]));
-      });
-      return "p" + String(max + 1).padStart(3, "0");
-    }
-
-    function clampPoint(point) {
-      const width = planImage.naturalWidth || planImage.width || 0;
-      const height = planImage.naturalHeight || planImage.height || 0;
-      point.x = Math.max(0, Math.min(Math.round(point.x), width));
-      point.y = Math.max(0, Math.min(Math.round(point.y), height));
-    }
-
-    function getStageCoordinates(clientX, clientY) {
-      const rect = planStage.getBoundingClientRect();
-      const scaleX = rect.width ? (planImage.naturalWidth || rect.width) / rect.width : 1;
-      const scaleY = rect.height ? (planImage.naturalHeight || rect.height) / rect.height : 1;
-      return {
-        x: Math.round((clientX - rect.left) * scaleX),
-        y: Math.round((clientY - rect.top) * scaleY)
-      };
-    }
-
-    function addPointAt(clientX, clientY) {
-      const coords = getStageCoordinates(clientX, clientY);
-      const point = normalizePoint({
-        id: createNextPointId(),
-        x: coords.x,
-        y: coords.y,
-        spec: DEFAULT_SPEC
-      }, plannerPoints.length);
-      clampPoint(point);
-      plannerPoints.push(point);
-      selectedPointId = point.id;
-      savePlannerPoints("点を追加しました。");
-      renderPlanner();
-    }
-
-    function updateSelectedPointField(field, value) {
-      const point = getSelectedPoint();
-      if (!point) return;
-
-      if (field === "id") {
-        const nextId = sanitizeValue(value);
-        if (!nextId) {
-          pointIdInput.value = point.id;
-          return;
-        }
-        const duplicated = plannerPoints.some(function (item) {
-          return item.id === nextId && item !== point;
-        });
-        if (duplicated) {
-          pointIdInput.value = point.id;
-          alert("同じ ID が既に存在します。");
-          return;
-        }
-        point.id = nextId;
-        selectedPointId = nextId;
-      }
-
-      if (field === "spec") {
-        point.spec = sanitizeValue(value) || DEFAULT_SPEC;
-      }
-
-      savePlannerPoints("点データを更新しました。");
-      renderPlanner();
-    }
-
-    function deleteSelectedPoint() {
-      if (!selectedPointId) return;
-      plannerPoints = plannerPoints.filter(function (point) {
-        return point.id !== selectedPointId;
-      });
-      selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
-      savePlannerPoints("点を削除しました。");
-      renderPlanner();
-    }
-
-    function downloadJson() {
-      const blob = new Blob([JSON.stringify(buildExportData(), null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = currentDrawing.positionsFile
-        ? currentDrawing.positionsFile.split("/").pop()
-        : getDownloadedFileName();
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      setSaveStatus("JSON を出力しました。");
-    }
-
-    async function loadPlanImage() {
-      return new Promise(function (resolve, reject) {
-        planImage.onload = function () {
-          planStage.style.width = planImage.naturalWidth + "px";
-          planStage.style.height = planImage.naturalHeight + "px";
-          resolve();
-        };
-        planImage.onerror = function () {
-          reject(new Error("Failed to load keyplan image."));
-        };
-        planImage.src = currentDrawing.keyPlanImage;
-      });
-    }
-
-    async function refreshPlanner() {
-      await loadPlanImage();
-      await loadPlannerPoints();
-    }
-
-    async function handleSiteChange() {
+    function handleSiteChange() {
       setCurrentSite(siteSelector.value);
       setCurrentDrawing(currentSite.defaultDrawingId);
       populateDrawingSelector();
       syncQuery();
       renderHistory();
-      await refreshPlanner();
     }
 
-    async function handleDrawingChange() {
+    function handleDrawingChange() {
       setCurrentDrawing(drawingSelector.value);
       syncQuery();
       renderHistory();
-      await refreshPlanner();
     }
 
     async function initializeAdmin() {
@@ -824,7 +369,6 @@
       populateDrawingSelector();
       syncQuery();
       renderHistory();
-      await refreshPlanner();
     }
 
     document.getElementById("xlsxBtn").addEventListener("click", exportXlsx);
@@ -833,93 +377,14 @@
       localStorage.removeItem(getHistoryKey());
       renderHistory();
     });
-
-    jsonBtn.addEventListener("click", downloadJson);
-    resetPositionsBtn.addEventListener("click", async function () {
-      if (!confirm("現在の点データを初期化しますか？")) return;
-      localStorage.removeItem(getPlannerStorageKey());
-      await loadPlannerPoints();
-    });
-
-    siteSelector.addEventListener("change", function () {
-      handleSiteChange().catch(function (error) {
-        console.error(error);
-        alert("図面データの切り替えに失敗しました。");
-      });
-    });
-
-    drawingSelector.addEventListener("change", function () {
-      handleDrawingChange().catch(function (error) {
-        console.error(error);
-        alert("図面データの切り替えに失敗しました。");
-      });
-    });
-
+    siteSelector.addEventListener("change", handleSiteChange);
+    drawingSelector.addEventListener("change", handleDrawingChange);
     goFieldBtn.addEventListener("click", goToFieldScreen);
-
-    pointList.addEventListener("click", function (event) {
-      const target = event.target.closest("[data-point-id]");
-      if (!target) return;
-      selectPoint(target.dataset.pointId);
-    });
-
-    pointLayer.addEventListener("pointerdown", function (event) {
-      const target = event.target.closest(".point");
-      if (!target) return;
-      event.preventDefault();
-      selectedPointId = target.dataset.pointId;
-      renderPlanner();
-      dragState = { pointId: target.dataset.pointId, didMove: false };
-      pointLayer.setPointerCapture(event.pointerId);
-    });
-
-    pointLayer.addEventListener("pointermove", function (event) {
-      if (!dragState) return;
-      const point = getSelectedPoint();
-      if (!point || point.id !== dragState.pointId) return;
-      const coords = getStageCoordinates(event.clientX, event.clientY);
-      point.x = coords.x;
-      point.y = coords.y;
-      dragState.didMove = true;
-      clampPoint(point);
-      renderPlanner();
-    });
-
-    function finishDrag() {
-      if (!dragState) return;
-      if (dragState.didMove) {
-        lastDragEndedAt = Date.now();
-      }
-      dragState = null;
-      savePlannerPoints("点位置を保存しました。");
-    }
-
-    pointLayer.addEventListener("pointerup", finishDrag);
-    pointLayer.addEventListener("pointercancel", finishDrag);
-
-    planStage.addEventListener("click", function (event) {
-      if (Date.now() - lastDragEndedAt < 250) return;
-      if (event.target.closest(".point")) return;
-      addPointAt(event.clientX, event.clientY);
-    });
-
-    pointIdInput.addEventListener("change", function () {
-      updateSelectedPointField("id", pointIdInput.value);
-    });
-
-    pointSpecInput.addEventListener("input", function () {
-      updateSelectedPointField("spec", pointSpecInput.value);
-    });
-
-    deletePointBtn.addEventListener("click", function () {
-      if (!getSelectedPoint()) return;
-      if (!confirm("選択中の点を削除しますか？")) return;
-      deleteSelectedPoint();
-    });
+    goEditorBtn.addEventListener("click", goToEditorScreen);
 
     initializeAdmin().catch(function (error) {
       console.error(error);
-      alert("admin.html の初期化に失敗しました。sites.json と画像パスを確認してください。");
+      alert("admin.html の初期化に失敗しました。sites.json を確認してください。");
     });
   </script>
 </body>
