@@ -389,8 +389,10 @@
         console.error("Failed to fetch sites.json", { url: response.url || SITE_DATA_URL, status: response.status });
         throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
       }
+      console.log("STEP1 fetch ok", { url: response.url || SITE_DATA_URL, status: response.status });
 
       const data = await response.json();
+      console.log("STEP2 json ok");
       console.log("RAW data =", data);
       console.log("sites =", data?.sites);
       const rawSites = Array.isArray(data?.sites) ? data.sites : [];
@@ -404,6 +406,7 @@
         if (!site.siteId || !site.drawings.length) return;
         nextSites[site.siteId] = site;
       });
+      console.log("STEP3 normalize ok", { siteIds: Object.keys(nextSites) });
 
       if (!Object.keys(nextSites).length){
         throw new Error(`${SITE_DATA_URL} does not contain any valid site records.`);
@@ -1185,8 +1188,9 @@
     });
 
     initializeApp().catch(error => {
-      console.error(error);
-      alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
+      console.error("LOAD ERROR =", error);
+      console.error(error?.stack);
+      // alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
     });
   </script>
 </body>
