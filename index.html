@@ -487,6 +487,13 @@
         const finish = () => {
           planImage.removeEventListener("load", finish);
           planImage.removeEventListener("error", fail);
+          console.log("ensurePlanImageLoaded:finish", {
+            attrSrc: planImage.getAttribute("src"),
+            src: planImage.src,
+            complete: planImage.complete,
+            naturalWidth: planImage.naturalWidth,
+            isSameElement: planImage === document.getElementById("planImage")
+          });
           resolve();
         };
         const fail = () => {
@@ -494,7 +501,11 @@
           planImage.removeEventListener("error", fail);
           console.error("planImage failed to load", {
             requestedSrc: src,
-            currentSrc: planImage.src
+            attrSrc: planImage.getAttribute("src"),
+            currentSrc: planImage.src,
+            complete: planImage.complete,
+            naturalWidth: planImage.naturalWidth,
+            isSameElement: planImage === document.getElementById("planImage")
           });
           reject(new Error(`Failed to load image: ${src}`));
         };
@@ -507,9 +518,17 @@
             selectedDrawing: currentDrawing,
             keyPlanImage: currentDrawing?.keyPlanImage,
             nextSrc: src,
-            currentPlanImageSrc: planImage.src
+            currentPlanImageSrc: planImage.src,
+            currentAttrSrc: planImage.getAttribute("src"),
+            isSameElement: planImage === document.getElementById("planImage")
           });
           planImage.src = src;
+          console.log("planImage assigned", {
+            attrSrc: planImage.getAttribute("src"),
+            src: planImage.src,
+            complete: planImage.complete,
+            naturalWidth: planImage.naturalWidth
+          });
           return;
         }
 
@@ -1173,13 +1192,25 @@
     }, { passive: true });
 
     planImage.addEventListener("load", () => {
-      console.log("planImage loaded", { src: planImage.src });
+      console.log("planImage loaded", {
+        attrSrc: planImage.getAttribute("src"),
+        src: planImage.src,
+        complete: planImage.complete,
+        naturalWidth: planImage.naturalWidth,
+        isSameElement: planImage === document.getElementById("planImage")
+      });
       syncPlanViewport(true);
       renderAll();
     });
 
     planImage.addEventListener("error", () => {
-      console.error("planImage.onerror", { src: planImage.src });
+      console.error("planImage.onerror", {
+        attrSrc: planImage.getAttribute("src"),
+        src: planImage.src,
+        complete: planImage.complete,
+        naturalWidth: planImage.naturalWidth,
+        isSameElement: planImage === document.getElementById("planImage")
+      });
     });
 
     window.addEventListener("resize", () => {
