@@ -52,7 +52,7 @@
   </div>
 
   <script>
-    const SITE_DATA_URL = "sites.json";
+    const SITE_DATA_URL = "./sites.json";
     let sites = [];
     let currentSite = null;
     let currentDrawing = null;
@@ -61,37 +61,20 @@
     const drawingSelector = document.getElementById("drawingSelector");
     const goFieldBtn = document.getElementById("goFieldBtn");
 
-    function normalizePositionRecord(position) {
-      const id = String(position?.id || "").trim();
-      const displayName = String(position?.displayName || "").trim();
-      const gridX = String(position?.gridX || "").trim();
-      const gridY = String(position?.gridY || "").trim();
-      const label = String(position?.label || "").trim();
-      const requiredType = String(position?.requiredType || "").trim();
-      const x = Number(position?.x);
-      const y = Number(position?.y);
-      if (!id || !displayName || !requiredType) return null;
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
-      return { id, displayName, gridX, gridY, label, requiredType, x, y };
-    }
-
     function normalizeDrawingRecord(drawing) {
       const drawingId = String(drawing?.drawingId || "").trim();
       const drawingName = String(drawing?.drawingName || "").trim();
-      const image = String(drawing?.image || "").trim();
-      const positions = Array.isArray(drawing?.positions)
-        ? drawing.positions.map(normalizePositionRecord).filter(Boolean)
-        : [];
-      return { drawingId, drawingName, image, positions };
+      const keyPlanImage = String(drawing?.keyPlanImage || drawing?.image || "").trim();
+      const positionsFile = String(drawing?.positionsFile || "").trim();
+      return { drawingId, drawingName, keyPlanImage, positionsFile };
     }
 
     function normalizeSiteRecord(site) {
-      const title = String(site?.title || "").trim();
+      const title = String(site?.title || site?.siteId || "").trim();
       const siteId = String(site?.siteId || title).trim();
       const siteName = String(site?.siteName || "").trim();
       const drawings = Array.isArray(site?.drawings)
-        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.image)
+        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.keyPlanImage && drawing.positionsFile)
         : [];
       const defaultDrawingId = String(site?.defaultDrawingId || drawings[0]?.drawingId || "").trim();
       return { siteId, title, siteName, defaultDrawingId, drawings };
@@ -99,10 +82,16 @@
 
     async function loadSitesData() {
       const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
-      const rawSites = await response.json();
-      if (!Array.isArray(rawSites)) throw new Error(`${SITE_DATA_URL} is invalid.`);
-      const normalized = rawSites.map(normalizeSiteRecord).filter(site => site.title && site.drawings.length);
+      if (!response.ok) {
+        console.error("Failed to fetch sites.json", { url: response.url || SITE_DATA_URL, status: response.status });
+        throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("RAW data =", data);
+      console.log("sites =", data?.sites);
+      const rawSites = Array.isArray(data?.sites) ? data.sites : [];
+      if (!rawSites.length) throw new Error(`${SITE_DATA_URL} is invalid.`);
+      const normalized = rawSites.map(normalizeSiteRecord).filter(site => site.siteId && site.drawings.length);
       if (!normalized.length) throw new Error(`${SITE_DATA_URL} does not contain any valid site records.`);
       return normalized;
     }
@@ -139,9 +128,9 @@
 
     function populateSiteSelector() {
       siteSelector.innerHTML = sites
-        .map(site => `<option value="${site.title}">${sanitizeValue(site.siteName)}</option>`)
+        .map(site => `<option value="${site.siteId}">${sanitizeValue(site.siteName)}</option>`)
         .join("");
-      siteSelector.value = currentSite.title;
+      siteSelector.value = currentSite.siteId;
     }
 
     function populateDrawingSelector() {
@@ -151,8 +140,8 @@
       drawingSelector.value = currentDrawing.drawingId;
     }
 
-    function setCurrentSite(title) {
-      currentSite = sites.find(site => site.title === title) || sites[0];
+    function setCurrentSite(siteId) {
+      currentSite = sites.find(site => site.siteId === siteId) || sites[0];
     }
 
     function setCurrentDrawing(drawingId) {
@@ -163,7 +152,7 @@
 
     function syncQuery() {
       const params = new URLSearchParams({
-        TITLE: currentSite.title,
+        SITE: currentSite.siteId,
         DRAWING: currentDrawing.drawingId
       });
       history.replaceState(null, "", `admin.html?${params.toString()}`);
@@ -171,7 +160,7 @@
 
     function goToFieldScreen() {
       const params = new URLSearchParams({
-        TITLE: currentSite.title,
+        SITE: currentSite.siteId,
         DRAWING: currentDrawing.drawingId
       });
       location.href = `index.html?${params.toString()}`;
@@ -244,8 +233,8 @@
       sites = await loadSitesData();
 
       const params = new URLSearchParams(location.search);
-      const requestedTitle = params.get("TITLE");
-      setCurrentSite(sites.find(site => site.title === requestedTitle)?.title || sites[0].title);
+      const requestedSiteId = params.get("SITE") || params.get("TITLE");
+      setCurrentSite(sites.find(site => site.siteId === requestedSiteId)?.siteId || sites[0].siteId);
 
       const requestedDrawingId = params.get("DRAWING");
       setCurrentDrawing(requestedDrawingId || currentSite.defaultDrawingId);

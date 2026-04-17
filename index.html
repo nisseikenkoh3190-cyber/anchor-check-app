@@ -283,7 +283,7 @@
   <canvas id="qrCanvas" style="display:none;"></canvas>
 
   <script>
-    const SITE_DATA_URL = "sites.json";
+    const SITE_DATA_URL = "./sites.json";
     let sites = {};
     let currentTitle = "";
     let currentSite = null;
@@ -386,11 +386,14 @@
     async function loadSitesData(){
       const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
       if (!response.ok){
+        console.error("Failed to fetch sites.json", { url: response.url || SITE_DATA_URL, status: response.status });
         throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
       }
 
-      const rawPayload = await response.json();
-      const rawSites = Array.isArray(rawPayload?.sites) ? rawPayload.sites : [];
+      const data = await response.json();
+      console.log("RAW data =", data);
+      console.log("sites =", data?.sites);
+      const rawSites = Array.isArray(data?.sites) ? data.sites : [];
       if (!rawSites.length){
         throw new Error(`${SITE_DATA_URL} does not contain any site records.`);
       }
@@ -427,6 +430,10 @@
     function setCurrentSite(title){
       currentTitle = title;
       currentSite = sites[title];
+      console.log("setCurrentSite", {
+        requestedSiteId: title,
+        selectedSite: currentSite
+      });
     }
 
     function setCurrentDrawing(drawingId){
@@ -434,6 +441,10 @@
       currentDrawing = currentSite.drawings.find(drawing => drawing.drawingId === drawingId) || currentSite.drawings[0];
       currentDrawingId = currentDrawing.drawingId;
       historyKey = `history_${currentSite.siteId}_${currentDrawingId}`;
+      console.log("setCurrentDrawing", {
+        requestedDrawingId: drawingId,
+        selectedDrawing: currentDrawing
+      });
     }
 
     function populateSiteSelector(){
@@ -441,6 +452,11 @@
         ? Object.values(sites).map(site => `<option value="${site.siteId}">${site.siteName}</option>`).join("")
         : "";
       siteSelector.value = currentSite?.siteId || "";
+      console.log("populateSiteSelector", {
+        currentTitle,
+        selectedSite: currentSite,
+        siteSelectorValue: siteSelector.value
+      });
     }
 
     function populateDrawingSelector(){
@@ -448,6 +464,11 @@
         ? currentSite.drawings.map(drawing => `<option value="${drawing.drawingId}">${drawing.drawingName}</option>`).join("")
         : "";
       drawingSelector.value = currentDrawingId || "";
+      console.log("populateDrawingSelector", {
+        selectedSite: currentSite,
+        selectedDrawing: currentDrawing,
+        drawingSelectorValue: drawingSelector.value
+      });
     }
 
     function syncQuery(){
@@ -468,12 +489,23 @@
         const fail = () => {
           planImage.removeEventListener("load", finish);
           planImage.removeEventListener("error", fail);
+          console.error("planImage failed to load", {
+            requestedSrc: src,
+            currentSrc: planImage.src
+          });
           reject(new Error(`Failed to load image: ${src}`));
         };
 
         if (planImage.getAttribute("src") !== src){
           planImage.addEventListener("load", finish, { once: true });
           planImage.addEventListener("error", fail, { once: true });
+          console.log("assigning planImage.src", {
+            selectedSite: currentSite,
+            selectedDrawing: currentDrawing,
+            keyPlanImage: currentDrawing?.keyPlanImage,
+            nextSrc: src,
+            currentPlanImageSrc: planImage.src
+          });
           planImage.src = src;
           return;
         }
@@ -518,9 +550,21 @@
       feedbackMarkerId = "";
       latestJudgement = null;
       markerStatuses = {};
+      console.log("loadDrawing:start", {
+        selectedSite: currentSite,
+        selectedDrawing: currentDrawing,
+        keyPlanImage: currentDrawing?.keyPlanImage,
+        currentPlanImageSrc: planImage.src
+      });
       document.title = `${currentSite.siteName} ${currentDrawing.drawingName}`;
       pageTitle.textContent = currentSite.siteName;
       pageMeta.textContent = currentDrawing.drawingName;
+      console.log("loadDrawing:labels-updated", {
+        pageTitle: pageTitle.textContent,
+        pageMeta: pageMeta.textContent,
+        siteSelectorValue: siteSelector.value,
+        drawingSelectorValue: drawingSelector.value
+      });
       adminLink.href = `admin.html?SITE=${encodeURIComponent(currentSite.siteId)}&DRAWING=${encodeURIComponent(currentDrawingId)}`;
       resetViewTransform();
       resetGestureTracking();
@@ -994,10 +1038,25 @@
 
     async function initializeApp(){
       sites = await loadSitesData();
+      console.log("initializeApp:sites-loaded", {
+        siteIds: Object.keys(sites)
+      });
       setCurrentSite(resolveInitialTitle(sites));
       setCurrentDrawing(resolveInitialDrawingId(currentSite));
+      console.log("initializeApp:selected", {
+        selectedSite: currentSite,
+        selectedDrawing: currentDrawing,
+        keyPlanImage: currentDrawing?.keyPlanImage,
+        currentPlanImageSrc: planImage.src
+      });
       populateSiteSelector();
       populateDrawingSelector();
+      console.log("initializeApp:selectors-synced", {
+        siteSelectorValue: siteSelector.value,
+        drawingSelectorValue: drawingSelector.value,
+        selectedSiteId: currentSite?.siteId,
+        selectedDrawingId: currentDrawing?.drawingId
+      });
       syncQuery();
       await loadDrawing();
       loadHistory();
@@ -1111,8 +1170,13 @@
     }, { passive: true });
 
     planImage.addEventListener("load", () => {
+      console.log("planImage loaded", { src: planImage.src });
       syncPlanViewport(true);
       renderAll();
+    });
+
+    planImage.addEventListener("error", () => {
+      console.error("planImage.onerror", { src: planImage.src });
     });
 
     window.addEventListener("resize", () => {
