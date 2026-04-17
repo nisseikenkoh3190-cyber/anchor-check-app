@@ -307,6 +307,7 @@
     let appHistory = [];
     let videoStream = null;
     let scanTimer = null;
+    let isCameraRunning = false;
     let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
     let viewTransform = { x: 0, y: 0, scale: 1 };
     let gestureState = { mode: "idle", lastX: 0, lastY: 0, startScale: 1, startDistance: 0, startX: 0, startY: 0, startMidX: 0, startMidY: 0 };
@@ -956,16 +957,46 @@
       renderAll();
     }
 
-    function stopCamera(){
-      if (scanTimer){ clearInterval(scanTimer); scanTimer = null; }
-      if (videoStream){
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
+    async function stopCamera(reason = "manual-stop"){
+      console.log("camera:stop", {
+        reason,
+        isCameraRunning,
+        hasStream: Boolean(videoStream)
+      });
+      if (scanTimer){
+        clearInterval(scanTimer);
+        scanTimer = null;
       }
+
+      const streamToRelease = videoStream || video.srcObject;
+      if (streamToRelease && typeof streamToRelease.getTracks === "function"){
+        streamToRelease.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (error) {
+            console.error("camera:track stop failed", error);
+          }
+        });
+      }
+
+      try {
+        video.pause();
+      } catch (error) {
+        console.error("camera:pause failed", error);
+      }
+
       video.srcObject = null;
+      videoStream = null;
+      isCameraRunning = false;
       cameraWrap.style.display = "none";
       cameraStatus.textContent = "未起動";
+      console.log("camera:stream released", {
+        reason,
+        srcObject: video.srcObject,
+        isCameraRunning
+      });
       recoverPanzoomAfterCamera();
+      await new Promise(resolve => setTimeout(resolve, 120));
     }
 
     async function startCamera(){
@@ -979,12 +1010,24 @@
       }
 
       try{
-        stopCamera();
+        console.log("camera:restart", {
+          isCameraRunning,
+          hasStream: Boolean(videoStream)
+        });
+        await stopCamera("restart");
+        console.log("camera:start", {
+          isCameraRunning,
+          hasStream: Boolean(videoStream)
+        });
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         });
+        console.log("getUserMedia success", {
+          trackCount: videoStream.getTracks().length
+        });
         video.srcObject = videoStream;
+        isCameraRunning = true;
         cameraWrap.style.display = "flex";
         cameraStatus.textContent = "カメラ起動中";
         await video.play();
@@ -1002,10 +1045,14 @@
             qrInput.value = code.data;
             cameraStatus.textContent = "QR読取完了";
             syncJudgementFromInput();
-            stopCamera();
+            void stopCamera("qr-complete");
           }
         }, 320);
       } catch (error){
+        console.error("getUserMedia fail", error);
+        isCameraRunning = false;
+        videoStream = null;
+        video.srcObject = null;
         alert("カメラを起動できませんでした。Safari のカメラ許可設定を確認してください。");
         cameraStatus.textContent = "カメラ起動失敗";
       }
