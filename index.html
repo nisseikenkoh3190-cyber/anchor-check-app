@@ -304,7 +304,7 @@
     let selectionFeedbackToken = 0;
     let markerStatuses = {};
     let latestJudgement = null;
-    let history = [];
+    let appHistory = [];
     let videoStream = null;
     let scanTimer = null;
     let planMetrics = { left: 0, top: 0, width: 0, height: 0 };
@@ -479,7 +479,11 @@
         SITE: currentSite.siteId,
         DRAWING: currentDrawingId
       });
-      history.replaceState(null, "", `?${params.toString()}`);
+      try {
+        window.history.replaceState(null, "", `?${params.toString()}`);
+      } catch (error) {
+        console.error("replaceState failed", error);
+      }
     }
 
     function ensurePlanImageLoaded(src){
@@ -897,15 +901,15 @@
     }
 
     function renderHistoryList(){
-      historyCount.textContent = `${history.length}件`;
+      historyCount.textContent = `${appHistory.length}件`;
       historyPanel.classList.toggle("open", historyPanelOpen);
       historyToggleBtn.textContent = historyPanelOpen ? "履歴を閉じる" : "履歴を見る";
 
       historyList.innerHTML = "";
-      historyEmpty.style.display = history.length ? "none" : "block";
-      if (!history.length) return;
+      historyEmpty.style.display = appHistory.length ? "none" : "block";
+      if (!appHistory.length) return;
 
-      history.forEach(entry => {
+      appHistory.forEach(entry => {
         const item = document.createElement("div");
         item.className = "history-item";
 
@@ -944,7 +948,7 @@
 
     function clearCurrentSiteHistory(){
       if (!confirm("この現場の履歴を削除します。よろしいですか？")) return;
-      history = [];
+      appHistory = [];
       markerStatuses = {};
       latestJudgement = null;
       localStorage.removeItem(historyKey);
@@ -1013,7 +1017,7 @@
         alert("柱位置の選択と QR 判定が完了してから保存してください。");
         return;
       }
-      history.unshift({
+      appHistory.unshift({
         time: new Date().toISOString().slice(0,19).replace("T"," "),
         pos: judged.positionId,
         displayName: judged.displayName,
@@ -1022,7 +1026,7 @@
         scannedType: judged.scannedType,
         result: judged.result
       });
-      localStorage.setItem(historyKey, JSON.stringify(history));
+      localStorage.setItem(historyKey, JSON.stringify(appHistory));
       if (judged.result === "ok" || judged.result === "ng"){
         markerStatuses[judged.positionId] = judged.result;
       }
@@ -1037,20 +1041,20 @@
       ].filter(Boolean);
 
       try{
-        history = JSON.parse(localStorage.getItem(historyKey) || "[]");
-        if (!history.length){
+        appHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
+        if (!appHistory.length){
           for (const legacyHistoryKey of legacyHistoryKeys){
             if (legacyHistoryKey === historyKey) continue;
-            history = JSON.parse(localStorage.getItem(legacyHistoryKey) || "[]");
-            if (history.length) break;
+            appHistory = JSON.parse(localStorage.getItem(legacyHistoryKey) || "[]");
+            if (appHistory.length) break;
           }
         }
       } catch {
-        history = [];
+        appHistory = [];
       }
 
       markerStatuses = {};
-      history.forEach(entry => {
+      appHistory.forEach(entry => {
         if (!entry?.pos) return;
         if (entry.result === "ok" || entry.result === "ng"){
           markerStatuses[entry.pos] = entry.result;

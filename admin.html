@@ -158,7 +158,11 @@
         SITE: currentSite.siteId,
         DRAWING: currentDrawing.drawingId
       });
-      history.replaceState(null, "", `admin.html?${params.toString()}`);
+      try {
+        window.history.replaceState(null, "", `admin.html?${params.toString()}`);
+      } catch (error) {
+        console.error("replaceState failed", error);
+      }
     }
 
     function goToFieldScreen() {
