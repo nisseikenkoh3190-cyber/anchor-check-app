@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>アンカーボルト照合アプリ 現場画面</title>
+  <title>繧｢繝ｳ繧ｫ繝ｼ繝懊Ν繝育・蜷医い繝励Μ 迴ｾ蝣ｴ逕ｻ髱｢</title>
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --line:#cbd5e1; --text:#0f172a; --muted:#475569;
@@ -25,6 +25,16 @@
     }
     .title{font-size:16px;font-weight:700}
     .meta{font-size:12px;color:var(--muted)}
+    .topbar-main{min-width:0;flex:1}
+    .topbar-controls{
+      display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:min(420px, 100%)
+    }
+    .field{display:grid;gap:4px}
+    .field-label{font-size:11px;color:var(--muted);font-weight:700}
+    .select{
+      width:100%;min-height:40px;border:1px solid var(--line);border-radius:12px;
+      padding:0 12px;background:#fff;color:var(--text);font-size:14px
+    }
     .link-btn{
       display:inline-flex;align-items:center;justify-content:center;min-height:42px;
       border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);
@@ -167,6 +177,8 @@
       background:rgba(255,255,255,.18);color:#fff;font-size:20px;font-weight:800;cursor:pointer
     }
     @media (max-width:900px){
+      .topbar{flex-direction:column;align-items:stretch}
+      .topbar-controls{grid-template-columns:1fr;min-width:0}
       .info-row{grid-template-columns:1fr}
       .bottom-panel{grid-template-columns:1fr}
       .toolbar{grid-template-columns:1fr 1fr}
@@ -178,9 +190,19 @@
 <body>
   <div class="app">
     <div class="topbar">
-      <div>
-        <div class="title" id="pageTitle">サンプル現場A</div>
-        <div class="meta" id="pageMeta">251210基礎ハイベース設置図</div>
+      <div class="topbar-main">
+        <div class="title" id="pageTitle">繧ｵ繝ｳ繝励Ν迴ｾ蝣ｴA</div>
+        <div class="meta" id="pageMeta">251210蝓ｺ遉弱ワ繧､繝吶・繧ｹ險ｭ鄂ｮ蝗ｳ</div>
+      </div>
+      <div class="topbar-controls">
+        <label class="field">
+          <span class="field-label">現場</span>
+          <select class="select" id="siteSelector"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">キープラン</span>
+          <select class="select" id="drawingSelector"></select>
+        </label>
       </div>
     </div>
 
@@ -199,51 +221,51 @@
       <div class="panel">
         <div class="selected-row">
           <div class="selected-info">
-            <div id="selectedMain" class="selected-main">未選択</div>
+            <div id="selectedMain" class="selected-main">譛ｪ驕ｸ謚・/div>
             <div id="selectedSub" class="selected-sub"></div>
           </div>
-          <button class="btn warn inline" id="saveBtn" type="button">保存</button>
+          <button class="btn warn inline" id="saveBtn" type="button">菫晏ｭ・/button>
         </div>
       </div>
       <div class="panel">
         <div id="resultBox" class="result-box">
-          <div class="result-state">未判定</div>
-          <div class="result-detail">柱位置を選択して、QRを読取してください。</div>
+          <div class="result-state">譛ｪ蛻､螳・/div>
+          <div class="result-detail">譟ｱ菴咲ｽｮ繧帝∈謚槭＠縺ｦ縲＿R繧定ｪｭ蜿悶＠縺ｦ縺上□縺輔＞縲・/div>
         </div>
       </div>
     </div>
 
     <div class="bottom-panel">
       <div class="stack">
-        <div class="panel-title">読めない時の手入力 / 読取状態</div>
-        <input class="input" id="qrInput" placeholder="読めない時はこちらに手入力">
-        <button class="btn" id="manualJudgeBtn" type="button">照合する</button>
-        <div id="cameraStatus" class="status">未起動</div>
+        <div class="panel-title">隱ｭ繧√↑縺・凾縺ｮ謇句・蜉・/ 隱ｭ蜿也憾諷・/div>
+        <input class="input" id="qrInput" placeholder="隱ｭ繧√↑縺・凾縺ｯ縺薙■繧峨↓謇句・蜉・>
+        <button class="btn" id="manualJudgeBtn" type="button">辣ｧ蜷医☆繧・/button>
+        <div id="cameraStatus" class="status">譛ｪ襍ｷ蜍・/div>
       </div>
 
       <div class="stack compact">
-        <div class="panel-title">操作</div>
+        <div class="panel-title">謫堺ｽ・/div>
         <div class="toolbar">
-          <button class="btn primary" id="cameraOnBtn">カメラ起動</button>
-          <button class="btn" id="cameraOffBtn">カメラOFF</button>
+          <button class="btn primary" id="cameraOnBtn">繧ｫ繝｡繝ｩ襍ｷ蜍・/button>
+          <button class="btn" id="cameraOffBtn">繧ｫ繝｡繝ｩOFF</button>
         </div>
-        <a class="link-btn" id="adminLink" href="admin.html">管理画面へもどる</a>
+        <a class="link-btn" id="adminLink" href="admin.html">邂｡逅・判髱｢縺ｸ繧ゅ←繧・/a>
       </div>
     </div>
 
     <div class="history-card">
       <div class="history-head">
         <div>
-          <div class="title">判定履歴</div>
-          <div class="history-count" id="historyCount">0件</div>
+          <div class="title">蛻､螳壼ｱ･豁ｴ</div>
+          <div class="history-count" id="historyCount">0莉ｶ</div>
         </div>
         <div class="history-actions">
-          <button class="btn" id="historyToggleBtn" type="button">履歴を見る</button>
-          <button class="btn danger" id="clearHistoryBtn" type="button">この現場の履歴を消去</button>
+          <button class="btn" id="historyToggleBtn" type="button">螻･豁ｴ繧定ｦ九ｋ</button>
+          <button class="btn danger" id="clearHistoryBtn" type="button">縺薙・迴ｾ蝣ｴ縺ｮ螻･豁ｴ繧呈ｶ亥悉</button>
         </div>
       </div>
       <div class="history-panel" id="historyPanel">
-        <div class="history-empty" id="historyEmpty">まだ履歴はありません。柱を選択してQR判定するとここに記録されます。</div>
+        <div class="history-empty" id="historyEmpty">縺ｾ縺螻･豁ｴ縺ｯ縺ゅｊ縺ｾ縺帙ｓ縲よ浤繧帝∈謚槭＠縺ｦQR蛻､螳壹☆繧九→縺薙％縺ｫ險倬鹸縺輔ｌ縺ｾ縺吶・/div>
         <div class="history-list" id="historyList"></div>
       </div>
     </div>
@@ -251,10 +273,10 @@
 
   <div class="camera-wrap" id="cameraWrap">
     <div class="camera-card">
-      <button class="camera-close" id="cameraCloseBtn" type="button">×</button>
+      <button class="camera-close" id="cameraCloseBtn" type="button">ﾃ・/button>
       <video id="video" autoplay playsinline muted></video>
       <div class="scan-guide"></div>
-      <div class="camera-footer">QRを枠の中に合わせてください</div>
+      <div class="camera-footer">QR繧呈棧縺ｮ荳ｭ縺ｫ蜷医ｏ縺帙※縺上□縺輔＞</div>
     </div>
   </div>
 
@@ -268,6 +290,7 @@
     let currentDrawingId = "";
     let currentDrawing = null;
     let historyKey = "";
+    let drawingLoadToken = 0;
 
     const MARKER_RADIUS = 6;
     const BASE_HIT_RADIUS = 14;
@@ -290,13 +313,16 @@
     let tapStart = null;
     let gestureMoved = false;
     let panzoomRecoveryFrame = null;
-    let historyPanelOpen = false;    const planViewport = document.getElementById("planViewport");
+    let historyPanelOpen = false;
+    const planViewport = document.getElementById("planViewport");
     const planContent = document.getElementById("planContent");
     const planStage = document.getElementById("planStage");
     const planImage = document.getElementById("planImage");
     const markerLayer = document.getElementById("markerLayer");
     const pageTitle = document.getElementById("pageTitle");
     const pageMeta = document.getElementById("pageMeta");
+    const siteSelector = document.getElementById("siteSelector");
+    const drawingSelector = document.getElementById("drawingSelector");
     const adminLink = document.getElementById("adminLink");
     const selectedMain = document.getElementById("selectedMain");
     const selectedSub = document.getElementById("selectedSub");
@@ -335,25 +361,22 @@
     function normalizeDrawingRecord(drawing){
       const drawingId = String(drawing?.drawingId || "").trim();
       const drawingName = String(drawing?.drawingName || "").trim();
-      const image = String(drawing?.image || "").trim();
-      const positions = Array.isArray(drawing?.positions)
-        ? drawing.positions.map(normalizePositionRecord).filter(Boolean)
-        : [];
+      const keyPlanImage = String(drawing?.keyPlanImage || drawing?.image || "").trim();
+      const positionsFile = String(drawing?.positionsFile || "").trim();
+      const sourceData = Array.isArray(drawing?.sourceData) ? drawing.sourceData : [];
 
-      return { drawingId, drawingName, image, positions };
+      return { drawingId, drawingName, keyPlanImage, positionsFile, sourceData, positions: [] };
     }
 
     function normalizeSiteRecord(site){
-      const title = String(site?.title || "").trim();
-      const siteId = String(site?.siteId || title).trim();
+      const siteId = String(site?.siteId || site?.title || "").trim();
       const drawings = Array.isArray(site?.drawings)
-        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.image)
+        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.keyPlanImage && drawing.positionsFile)
         : [];
       const defaultDrawingId = String(site?.defaultDrawingId || drawings[0]?.drawingId || "").trim();
 
       return {
         siteId,
-        title,
         siteName: String(site?.siteName || "").trim(),
         defaultDrawingId,
         drawings
@@ -366,16 +389,17 @@
         throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
       }
 
-      const rawSites = await response.json();
-      if (!Array.isArray(rawSites) || !rawSites.length){
+      const rawPayload = await response.json();
+      const rawSites = Array.isArray(rawPayload?.sites) ? rawPayload.sites : [];
+      if (!rawSites.length){
         throw new Error(`${SITE_DATA_URL} does not contain any site records.`);
       }
 
       const nextSites = {};
       rawSites.forEach(rawSite => {
         const site = normalizeSiteRecord(rawSite);
-        if (!site.title || !site.drawings.length) return;
-        nextSites[site.title] = site;
+        if (!site.siteId || !site.drawings.length) return;
+        nextSites[site.siteId] = site;
       });
 
       if (!Object.keys(nextSites).length){
@@ -387,7 +411,8 @@
 
     function resolveInitialTitle(nextSites){
       const defaultTitle = Object.keys(nextSites)[0];
-      const requestedTitle = new URLSearchParams(location.search).get("TITLE");
+      const params = new URLSearchParams(location.search);
+      const requestedTitle = params.get("SITE") || params.get("TITLE");
       return nextSites[requestedTitle] ? requestedTitle : defaultTitle;
     }
 
@@ -411,7 +436,84 @@
       historyKey = `history_${currentSite.siteId}_${currentDrawingId}`;
     }
 
-    function loadDrawing(){
+    function populateSiteSelector(){
+      siteSelector.innerHTML = currentTitle
+        ? Object.values(sites).map(site => `<option value="${site.siteId}">${site.siteName}</option>`).join("")
+        : "";
+      siteSelector.value = currentSite?.siteId || "";
+    }
+
+    function populateDrawingSelector(){
+      drawingSelector.innerHTML = currentSite
+        ? currentSite.drawings.map(drawing => `<option value="${drawing.drawingId}">${drawing.drawingName}</option>`).join("")
+        : "";
+      drawingSelector.value = currentDrawingId || "";
+    }
+
+    function syncQuery(){
+      const params = new URLSearchParams({
+        SITE: currentSite.siteId,
+        DRAWING: currentDrawingId
+      });
+      history.replaceState(null, "", `?${params.toString()}`);
+    }
+
+    function ensurePlanImageLoaded(src){
+      return new Promise((resolve, reject) => {
+        const finish = () => {
+          planImage.removeEventListener("load", finish);
+          planImage.removeEventListener("error", fail);
+          resolve();
+        };
+        const fail = () => {
+          planImage.removeEventListener("load", finish);
+          planImage.removeEventListener("error", fail);
+          reject(new Error(`Failed to load image: ${src}`));
+        };
+
+        if (planImage.getAttribute("src") !== src){
+          planImage.addEventListener("load", finish, { once: true });
+          planImage.addEventListener("error", fail, { once: true });
+          planImage.src = src;
+          return;
+        }
+
+        if (planImage.complete && planImage.naturalWidth){
+          resolve();
+          return;
+        }
+
+        planImage.addEventListener("load", finish, { once: true });
+        planImage.addEventListener("error", fail, { once: true });
+      });
+    }
+
+    async function loadPositionsForDrawing(drawing){
+      const response = await fetch(drawing.positionsFile, { cache: "no-store" });
+      if (!response.ok){
+        throw new Error(`Failed to load positions file: ${drawing.positionsFile}`);
+      }
+
+      const rawPositions = await response.json();
+      if (!Array.isArray(rawPositions)) return [];
+
+      const naturalWidth = planImage.naturalWidth || 1;
+      const naturalHeight = planImage.naturalHeight || 1;
+
+      return rawPositions.map(position => normalizePositionRecord({
+        id: position?.id,
+        displayName: position?.id,
+        gridX: "",
+        gridY: "",
+        label: position?.id,
+        requiredType: position?.spec,
+        x: Number(position?.x) / naturalWidth,
+        y: Number(position?.y) / naturalHeight
+      })).filter(Boolean);
+    }
+
+    async function loadDrawing(){
+      const token = ++drawingLoadToken;
       selected = null;
       feedbackMarkerId = "";
       latestJudgement = null;
@@ -419,10 +521,15 @@
       document.title = `${currentSite.siteName} ${currentDrawing.drawingName}`;
       pageTitle.textContent = currentSite.siteName;
       pageMeta.textContent = currentDrawing.drawingName;
-      planImage.src = currentDrawing.image;
-      adminLink.href = `admin.html?TITLE=${encodeURIComponent(currentSite.title)}&DRAWING=${encodeURIComponent(currentDrawingId)}`;
+      adminLink.href = `admin.html?SITE=${encodeURIComponent(currentSite.siteId)}&DRAWING=${encodeURIComponent(currentDrawingId)}`;
       resetViewTransform();
       resetGestureTracking();
+      await ensurePlanImageLoaded(currentDrawing.keyPlanImage);
+      const positions = await loadPositionsForDrawing(currentDrawing);
+      if (token !== drawingLoadToken) return;
+      currentDrawing.positions = positions;
+      syncPlanViewport(true);
+      renderAll();
     }
 
     function applyContentTransform(){
@@ -480,7 +587,8 @@
 
     function clampScale(scale){
       return Math.max(1, Math.min(4, scale));
-    }    function parseQrValue(raw){
+    }
+    function parseQrValue(raw){
       if (!raw) return "";
       const text = raw.trim().toUpperCase();
       const patterns = [/TYPE[:=]([A-Z0-9-]+)/, /\b(EB\d+-\d+-\d+)\b/];
@@ -629,13 +737,13 @@
 
     function judgeManualInput(){
       if (!selected){
-        alert("柱位置を選択してください。");
+        alert("譟ｱ菴咲ｽｮ繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・);
         return;
       }
 
       const parsed = parseQrValue(qrInput.value);
       if (!parsed){
-        alert("TYPEを入力してください。");
+        alert("TYPE繧貞・蜉帙＠縺ｦ縺上□縺輔＞縲・);
         return;
       }
 
@@ -651,7 +759,7 @@
       feedbackMarkerId = pos.id;
       latestJudgement = null;
       qrInput.value = "";
-      cameraStatus.textContent = "未起動";
+      cameraStatus.textContent = "譛ｪ襍ｷ蜍・;
       renderAll();
 
       await new Promise(resolve => setTimeout(resolve, SELECTION_FEEDBACK_MS));
@@ -686,7 +794,7 @@
 
     function renderSelection(){
       if (!selected){
-        selectedMain.textContent = "未選択";
+        selectedMain.textContent = "譛ｪ驕ｸ謚・;
         selectedSub.textContent = "";
       } else {
         selectedMain.textContent = selected.displayName;
@@ -703,18 +811,19 @@
 
       if (!displayResult){
         resultBox.className = "result-box";
-        resultBox.innerHTML = `<div class="result-state">未判定</div><div class="result-detail">柱位置を選択して、QRを読取してください。</div>`;
+        resultBox.innerHTML = `<div class="result-state">譛ｪ蛻､螳・/div><div class="result-detail">譟ｱ菴咲ｽｮ繧帝∈謚槭＠縺ｦ縲＿R繧定ｪｭ蜿悶＠縺ｦ縺上□縺輔＞縲・/div>`;
         return;
       }
 
       if (displayResult.result === "ok"){
         resultBox.className = "result-box ok";
-        resultBox.innerHTML = `<div class="result-state">適合</div><div class="result-detail">必要TYPE: ${displayResult.requiredType}<br>読取TYPE: ${displayResult.scannedType}</div>`;
+        resultBox.innerHTML = `<div class="result-state">驕ｩ蜷・/div><div class="result-detail">蠢・ｦゝYPE: ${displayResult.requiredType}<br>隱ｭ蜿傍YPE: ${displayResult.scannedType}</div>`;
       } else {
         resultBox.className = "result-box ng";
-        resultBox.innerHTML = `<div class="result-state">不適合</div><div class="result-detail">必要TYPE: ${displayResult.requiredType}<br>読取TYPE: ${displayResult.scannedType}</div>`;
+        resultBox.innerHTML = `<div class="result-state">荳埼←蜷・/div><div class="result-detail">蠢・ｦゝYPE: ${displayResult.requiredType}<br>隱ｭ蜿傍YPE: ${displayResult.scannedType}</div>`;
       }
-    }    function renderAll(){
+    }
+    function renderAll(){
       renderMarkers();
       renderSelection();
       renderResult();
@@ -722,9 +831,9 @@
     }
 
     function renderHistoryList(){
-      historyCount.textContent = `${history.length}件`;
+      historyCount.textContent = `${history.length}莉ｶ`;
       historyPanel.classList.toggle("open", historyPanelOpen);
-      historyToggleBtn.textContent = historyPanelOpen ? "履歴を閉じる" : "履歴を見る";
+      historyToggleBtn.textContent = historyPanelOpen ? "螻･豁ｴ繧帝哩縺倥ｋ" : "螻･豁ｴ繧定ｦ九ｋ";
 
       historyList.innerHTML = "";
       historyEmpty.style.display = history.length ? "none" : "block";
@@ -748,11 +857,11 @@
           </div>
           <div class="history-item-grid">
             <div>
-              <div class="history-label">読取値</div>
+              <div class="history-label">隱ｭ蜿門､</div>
               <div>${entry.scannedType || "-"}</div>
             </div>
             <div>
-              <div class="history-label">必要値</div>
+              <div class="history-label">蠢・ｦ∝､</div>
               <div>${entry.requiredType || "-"}</div>
             </div>
           </div>
@@ -768,12 +877,12 @@
     }
 
     function clearCurrentSiteHistory(){
-      if (!confirm("この現場の履歴を削除します。よろしいですか？")) return;
+      if (!confirm("縺薙・迴ｾ蝣ｴ縺ｮ螻･豁ｴ繧貞炎髯､縺励∪縺吶ゅｈ繧阪＠縺・〒縺吶°・・)) return;
       history = [];
       markerStatuses = {};
       latestJudgement = null;
       localStorage.removeItem(historyKey);
-      alert("この現場の履歴を削除しました");
+      alert("縺薙・迴ｾ蝣ｴ縺ｮ螻･豁ｴ繧貞炎髯､縺励∪縺励◆");
       renderAll();
     }
 
@@ -785,17 +894,17 @@
       }
       video.srcObject = null;
       cameraWrap.style.display = "none";
-      cameraStatus.textContent = "未起動";
+      cameraStatus.textContent = "譛ｪ襍ｷ蜍・;
       recoverPanzoomAfterCamera();
     }
 
     async function startCamera(){
       if (typeof jsQR === "undefined"){
-        alert("QR読取ライブラリの読込に失敗しました。通信環境を確認して再読み込みしてください。");
+        alert("QR隱ｭ蜿悶Λ繧､繝悶Λ繝ｪ縺ｮ隱ｭ霎ｼ縺ｫ螟ｱ謨励＠縺ｾ縺励◆縲る壻ｿ｡迺ｰ蠅・ｒ遒ｺ隱阪＠縺ｦ蜀崎ｪｭ縺ｿ霎ｼ縺ｿ縺励※縺上□縺輔＞縲・);
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("このブラウザではカメラ起動に対応していません。");
+        alert("縺薙・繝悶Λ繧ｦ繧ｶ縺ｧ縺ｯ繧ｫ繝｡繝ｩ襍ｷ蜍輔↓蟇ｾ蠢懊＠縺ｦ縺・∪縺帙ｓ縲・);
         return;
       }
 
@@ -807,7 +916,7 @@
         });
         video.srcObject = videoStream;
         cameraWrap.style.display = "flex";
-        cameraStatus.textContent = "カメラ起動中";
+        cameraStatus.textContent = "繧ｫ繝｡繝ｩ襍ｷ蜍穂ｸｭ";
         await video.play();
 
         scanTimer = setInterval(() => {
@@ -821,21 +930,21 @@
           const code = jsQR(imageData.data, w, h, { inversionAttempts: "dontInvert" });
           if (code && code.data){
             qrInput.value = code.data;
-            cameraStatus.textContent = "QR読取完了";
+            cameraStatus.textContent = "QR隱ｭ蜿門ｮ御ｺ・;
             syncJudgementFromInput();
             stopCamera();
           }
         }, 320);
       } catch (error){
-        alert("カメラを起動できませんでした。Safariのカメラ許可設定を確認してください。");
-        cameraStatus.textContent = "カメラ起動失敗";
+        alert("繧ｫ繝｡繝ｩ繧定ｵｷ蜍輔〒縺阪∪縺帙ｓ縺ｧ縺励◆縲４afari縺ｮ繧ｫ繝｡繝ｩ險ｱ蜿ｯ險ｭ螳壹ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞縲・);
+        cameraStatus.textContent = "繧ｫ繝｡繝ｩ襍ｷ蜍募､ｱ謨・;
       }
     }
 
     function saveHistory(){
       const judged = latestJudgement;
       if (!judged){
-        alert("柱位置の選択とQR値の判定が必要です。");
+        alert("譟ｱ菴咲ｽｮ縺ｮ驕ｸ謚槭→QR蛟､縺ｮ蛻､螳壹′蠢・ｦ√〒縺吶・);
         return;
       }
       history.unshift({
@@ -851,7 +960,7 @@
       if (judged.result === "ok" || judged.result === "ng"){
         markerStatuses[judged.positionId] = judged.result;
       }
-      alert("照合履歴を保存しました");
+      alert("辣ｧ蜷亥ｱ･豁ｴ繧剃ｿ晏ｭ倥＠縺ｾ縺励◆");
       renderAll();
     }
 
@@ -887,11 +996,35 @@
       sites = await loadSitesData();
       setCurrentSite(resolveInitialTitle(sites));
       setCurrentDrawing(resolveInitialDrawingId(currentSite));
-      loadDrawing();
+      populateSiteSelector();
+      populateDrawingSelector();
+      syncQuery();
+      await loadDrawing();
       loadHistory();
-      syncPlanViewport(true);
       renderAll();
-    }    document.getElementById("cameraOnBtn").addEventListener("click", startCamera);
+    }
+
+    siteSelector.addEventListener("change", async event => {
+      setCurrentSite(event.target.value);
+      setCurrentDrawing(currentSite.defaultDrawingId);
+      populateSiteSelector();
+      populateDrawingSelector();
+      syncQuery();
+      await loadDrawing();
+      loadHistory();
+      renderAll();
+    });
+
+    drawingSelector.addEventListener("change", async event => {
+      setCurrentDrawing(event.target.value);
+      populateDrawingSelector();
+      syncQuery();
+      await loadDrawing();
+      loadHistory();
+      renderAll();
+    });
+
+    document.getElementById("cameraOnBtn").addEventListener("click", startCamera);
     document.getElementById("cameraOffBtn").addEventListener("click", stopCamera);
     document.getElementById("cameraCloseBtn").addEventListener("click", stopCamera);
     document.getElementById("saveBtn").addEventListener("click", saveHistory);
@@ -989,7 +1122,7 @@
 
     initializeApp().catch(error => {
       console.error(error);
-      alert("現場データの読込に失敗しました。ネットワーク接続、または現場データ設定を確認してください。");
+      alert("迴ｾ蝣ｴ繝・・繧ｿ縺ｮ隱ｭ霎ｼ縺ｫ螟ｱ謨励＠縺ｾ縺励◆縲ゅロ繝・ヨ繝ｯ繝ｼ繧ｯ謗･邯壹√∪縺溘・迴ｾ蝣ｴ繝・・繧ｿ險ｭ螳壹ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞縲・);
     });
   </script>
 </body>

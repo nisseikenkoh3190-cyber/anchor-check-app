@@ -1,159 +1,17 @@
-[
-  {
-    "siteId": "sampleA",
-    "title": "sampleA",
-    "siteName": "サンプル現場A",
-    "defaultDrawingId": "a-plan-01",
-    "drawings": [
-      {
-        "drawingId": "a-plan-01",
-        "drawingName": "A現場_設置図01",
-        "image": "keyplan.png",
-        "positions": [
-          { "id": "a1-x1", "displayName": "X1-Y3 / A-C1", "gridX": "X1", "gridY": "Y3", "label": "A-C1", "requiredType": "EB300-8-30", "x": 0.188, "y": 0.154 },
-          { "id": "a1-x2", "displayName": "X2-Y2 / A-C2", "gridX": "X2", "gridY": "Y2", "label": "A-C2", "requiredType": "EB300-8-36", "x": 0.371, "y": 0.389 }
-        ]
-      },
-      {
-        "drawingId": "a-plan-02",
-        "drawingName": "A現場_設置図02",
-        "image": "keyplan.png",
-        "positions": [
-          { "id": "a2-x1", "displayName": "X3-Y3 / A-D1", "gridX": "X3", "gridY": "Y3", "label": "A-D1", "requiredType": "EB300-10-40", "x": 0.548, "y": 0.154 },
-          { "id": "a2-x2", "displayName": "X4-Y1 / A-D2", "gridX": "X4", "gridY": "Y1", "label": "A-D2", "requiredType": "EB300-10-45", "x": 0.725, "y": 0.634 }
-        ]
-      }
-    ]
-  },
-  {
-    "siteId": "sampleB",
-    "title": "sampleB",
-    "siteName": "サンプル現場B",
-    "defaultDrawingId": "b-plan-01",
-    "drawings": [
-      {
-        "drawingId": "b-plan-01",
-        "drawingName": "B現場_設置図01",
-        "image": "keyplan.png",
-        "positions": [
-          { "id": "b1-x1", "displayName": "X1-Y1 / B-C1", "gridX": "X1", "gridY": "Y1", "label": "B-C1", "requiredType": "EB400-8-30", "x": 0.188, "y": 0.634 },
-          { "id": "b1-x2", "displayName": "X5-Y3 / B-C2", "gridX": "X5", "gridY": "Y3", "label": "B-C2", "requiredType": "EB400-8-36", "x": 0.907, "y": 0.154 }
-        ]
-      }
-    ]
-  },
-  {
-    "siteId": "tokyo-east-01",
-    "title": "tokyo-east-01",
-    "siteName": "東京東物流センター新築工事",
-    "defaultDrawingId": "foundation-b1",
-    "drawings": [
-      {
-        "drawingId": "foundation-b1",
-        "drawingName": "B1F 基礎伏図 A工区",
-        "image": "keyplan.png",
-        "positions": [
-          { "id": "x4-y7-c3", "displayName": "X4-Y7 / C3", "gridX": "X4", "gridY": "Y7", "label": "C3", "requiredType": "EB490-10-120", "x": 0.188, "y": 0.154 },
-          { "id": "x5-y7-c4", "displayName": "X5-Y7 / 外周柱C4", "gridX": "X5", "gridY": "Y7", "label": "外周柱C4", "requiredType": "EB490-10-130", "x": 0.371, "y": 0.389 },
-          { "id": "x7-y3-core-a", "displayName": "X7-Y3 / コア柱A", "gridX": "X7", "gridY": "Y3", "label": "コア柱A", "requiredType": "EB590-12-150", "x": 0.725, "y": 0.634 },
-          { "id": "invalid-out-of-range", "displayName": "X9-Y9 / 無効データ確認用", "gridX": "X9", "gridY": "Y9", "label": "無効データ確認用", "requiredType": "EB000-00-00", "x": 1.2, "y": 0.2 }
-        ]
-      }
-    ]
-  },
-  {
-    "siteId": "nishibo-001",
-    "title": "nishibo-001",
-    "siteName": "額新保有料老人ホーム",
-    "defaultDrawingId": "nishibo-plan-001",
-    "drawings": [
-      {
-        "drawingId": "nishibo-plan-001",
-        "drawingName": "キープラン検証図",
-        "image": "plans/nishibo/nishibo-plan-001.png",
-       "positions": [
-  {
-    "id": "x3-y2-c1a",
-    "displayName": "X3-Y2 / C1A",
-    "gridX": "X3",
-    "gridY": "Y2",
-    "label": "C1A",
-    "requiredType": "EB300-8-30",
-    "x": 0.26,
-    "y": 0.40
-  },
-  {
-    "id": "x5-y2-c1a",
-    "displayName": "X5-Y2 / C1A",
-    "gridX": "X5",
-    "gridY": "Y2",
-    "label": "C1A",
-    "requiredType": "EB300-8-30",
-    "x": 0.34,
-    "y": 0.40
-  },
-  {
-    "id": "x7-y2-c1",
-    "displayName": "X7-Y2 / C1",
-    "gridX": "X7",
-    "gridY": "Y2",
-    "label": "C1",
-    "requiredType": "EB300-8-30",
-    "x": 0.42,
-    "y": 0.40
-  },
-  {
-    "id": "x9-y2-c1",
-    "displayName": "X9-Y2 / C1",
-    "gridX": "X9",
-    "gridY": "Y2",
-    "label": "C1",
-    "requiredType": "EB300-8-30",
-    "x": 0.50,
-    "y": 0.40
-  },
-  {
-    "id": "x3-y3-c1a",
-    "displayName": "X3-Y3 / C1A",
-    "gridX": "X3",
-    "gridY": "Y3",
-    "label": "C1A",
-    "requiredType": "EB300-8-30",
-    "x": 0.26,
-    "y": 0.49
-  },
-  {
-    "id": "x5-y3-c1a",
-    "displayName": "X5-Y3 / C1A",
-    "gridX": "X5",
-    "gridY": "Y3",
-    "label": "C1A",
-    "requiredType": "EB300-8-30",
-    "x": 0.34,
-    "y": 0.49
-  },
-  {
-    "id": "x7-y3-c1",
-    "displayName": "X7-Y3 / C1",
-    "gridX": "X7",
-    "gridY": "Y3",
-    "label": "C1",
-    "requiredType": "EB300-8-30",
-    "x": 0.42,
-    "y": 0.49
-  },
-  {
-    "id": "x9-y3-c1",
-    "displayName": "X9-Y3 / C1",
-    "gridX": "X9",
-    "gridY": "Y3",
-    "label": "C1",
-    "requiredType": "EB300-8-30",
-    "x": 0.50,
-    "y": 0.49
-  }
-]
-      }
-    ]
-  }
-]
+{
+  "sites": [
+    {
+      "siteId": "site_001",
+      "siteName": "仮設確認現場",
+      "drawings": [
+        {
+          "drawingId": "kp01",
+          "drawingName": "仮キープラン01",
+          "keyPlanImage": "assets/site_001/kp01/keyplan.png",
+          "positionsFile": "assets/site_001/kp01/positions.json",
+          "sourceData": []
+        }
+      ]
+    }
+  ]
+}
