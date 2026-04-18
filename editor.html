@@ -14,7 +14,6 @@
       --accent: #0f172a;
       --point: #ef4444;
       --point-active: #2563eb;
-      --soft: #eff6ff;
     }
 
     * { box-sizing: border-box; }
@@ -25,7 +24,7 @@
       color: var(--text);
     }
     .wrap {
-      max-width: 1440px;
+      max-width: 1380px;
       margin: 0 auto;
       padding: 20px;
     }
@@ -45,6 +44,13 @@
       font-size: 13px;
       line-height: 1.5;
     }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: end;
+    }
     .field {
       display: grid;
       gap: 6px;
@@ -53,13 +59,6 @@
       font-size: 12px;
       color: var(--muted);
       font-weight: 700;
-    }
-    .controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto auto;
-      gap: 10px;
-      margin-top: 12px;
-      align-items: end;
     }
     .input, .select, .textarea {
       width: 100%;
@@ -131,28 +130,35 @@
       line-height: 1.5;
       word-break: break-all;
     }
-    .tool-grid {
+    .source-layout {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 320px minmax(0, 1fr);
       gap: 12px;
+      align-items: start;
       margin-top: 12px;
     }
-    .subcard {
+    .canvas-panel {
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 14px;
       background: #fff;
+      padding: 12px;
+    }
+    .source-canvas-wrap {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f8fafc;
+      overflow: auto;
+      max-height: 320px;
+    }
+    .source-canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
     }
     .inline-fields {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
-    }
-    .tiny {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-      margin-top: 8px;
     }
     .status {
       min-height: 20px;
@@ -161,15 +167,9 @@
       margin-top: 10px;
       line-height: 1.5;
     }
-    .result-list {
-      margin: 8px 0 0;
-      padding-left: 18px;
-      font-size: 13px;
-      line-height: 1.5;
-    }
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
+      grid-template-columns: minmax(0, 1fr) 340px;
       gap: 16px;
       align-items: start;
     }
@@ -196,13 +196,6 @@
     .plan-image {
       display: block;
       max-width: none;
-    }
-    .draft-region {
-      position: absolute;
-      border: 2px dashed rgba(37, 99, 235, 0.7);
-      background: rgba(37, 99, 235, 0.08);
-      pointer-events: none;
-      display: none;
     }
     .point-layer {
       position: absolute;
@@ -262,7 +255,7 @@
     .point-item.active {
       border-color: var(--point-active);
       box-shadow: inset 0 0 0 1px var(--point-active);
-      background: var(--soft);
+      background: #eff6ff;
     }
     .point-item-title {
       display: flex;
@@ -282,14 +275,14 @@
       color: var(--muted);
       font-size: 13px;
     }
-    @media (max-width: 1180px) {
+    @media (max-width: 1100px) {
       .layout {
         grid-template-columns: 1fr;
       }
     }
     @media (max-width: 980px) {
       .controls,
-      .tool-grid,
+      .source-layout,
       .inline-fields {
         grid-template-columns: 1fr;
       }
@@ -300,7 +293,7 @@
   <div class="wrap">
     <div class="card">
       <h1>配置編集画面</h1>
-      <div class="muted">既存の手動編集を維持しつつ、positions.json のマスターたたき台を半自動生成できます。完璧な抽出よりも、短時間で下書きを作って手修正しやすいことを優先しています。</div>
+      <div class="muted">PC 用の配置編集画面です。既存の手動点編集、仮保存、JSON 出力はそのまま使えます。</div>
       <div class="controls">
         <label class="field">
           <span class="label">現場選択</span>
@@ -330,78 +323,63 @@
     </div>
 
     <div class="card">
-      <h2>自動たたき台生成</h2>
-      <div class="muted">1図面1spec を前提に、keyplan 領域から点候補を生成して同じ spec を一括付与します。将来 OCR やより高度な抽出を足せるよう、spec 抽出・領域決定・候補生成の関数を分離しています。</div>
-      <div class="tool-grid">
-        <div class="subcard">
-          <h3>spec と keyplan 範囲</h3>
-          <label class="field" style="margin-top:10px;">
-            <span class="label">一括付与 spec</span>
-            <input class="input" id="draftSpecInput" type="text" placeholder="EB350-4-30" />
+      <h2>元図面読み込み</h2>
+      <div class="muted">抽出前の元図面画像を読み込み、`sourceCanvas` に保持します。今回は読み込みと表示だけを追加しており、既存の編集フローには影響しません。</div>
+      <div class="source-layout">
+        <div class="canvas-panel">
+          <label class="field">
+            <span class="label">元図面画像</span>
+            <input class="input" id="sourceImageInput" type="file" accept="image/*" />
           </label>
-          <div class="tiny">現時点では OCR は未実装です。図面右下の TYPE / 型式欄を読む想定の受け皿として、まずは手入力で流せるようにしています。</div>
-          <div class="inline-fields" style="margin-top:12px;">
-            <label class="field">
-              <span class="label">keyplan X</span>
-              <input class="input" id="draftRegionXInput" type="number" min="0" step="1" />
-            </label>
-            <label class="field">
-              <span class="label">keyplan Y</span>
-              <input class="input" id="draftRegionYInput" type="number" min="0" step="1" />
-            </label>
-            <label class="field">
-              <span class="label">keyplan W</span>
-              <input class="input" id="draftRegionWInput" type="number" min="1" step="1" />
-            </label>
-            <label class="field">
-              <span class="label">keyplan H</span>
-              <input class="input" id="draftRegionHInput" type="number" min="1" step="1" />
-            </label>
-          </div>
-          <div class="btn-row">
-            <button class="btn" id="draftDefaultRegionBtn" type="button">右上デフォルト範囲</button>
-          </div>
-          <div class="tiny">初期値は「図面右上付近の格子状領域」を仮定した大まかな範囲です。必要に応じて数値を調整してください。</div>
+          <div class="status" id="sourceCanvasStatus">まだ画像は読み込まれていません。</div>
         </div>
-
-        <div class="subcard">
-          <h3>点候補生成</h3>
-          <div class="inline-fields" style="margin-top:10px;">
-            <label class="field">
-              <span class="label">しきい値</span>
-              <input class="input" id="draftThresholdInput" type="number" min="0" max="255" step="1" value="170" />
-            </label>
-            <label class="field">
-              <span class="label">最小面積</span>
-              <input class="input" id="draftMinAreaInput" type="number" min="1" step="1" value="10" />
-            </label>
-            <label class="field">
-              <span class="label">最大面積</span>
-              <input class="input" id="draftMaxAreaInput" type="number" min="1" step="1" value="220" />
-            </label>
-            <label class="field">
-              <span class="label">縮小率</span>
-              <input class="input" id="draftScaleInput" type="number" min="0.1" max="1" step="0.05" value="0.35" />
-            </label>
+        <div class="canvas-panel">
+          <div class="label">sourceCanvas</div>
+          <div class="source-canvas-wrap" style="margin-top:8px;">
+            <canvas id="sourceCanvas" class="source-canvas"></canvas>
           </div>
-          <div class="btn-row">
-            <button class="btn primary" id="autoDraftBtn" type="button">自動たたき台生成</button>
-          </div>
-          <div class="tiny">今は簡易な画像ヒューリスティックで候補点を拾います。誤検出や漏れは手動で調整する前提です。</div>
-          <div class="status" id="draftStatus"></div>
-          <ul class="result-list" id="draftSummaryList"></ul>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>手動仕上げ</h2>
+      <h2>点候補生成</h2>
+      <div class="muted">現在は keyplan 画像から候補点を作ります。黒塗り四角を優先し、白抜き四角や細い線の交点を除外しやすい条件で絞ります。</div>
+      <div class="inline-fields" style="margin-top:12px;">
+        <label class="field">
+          <span class="label">しきい値</span>
+          <input class="input" id="candidateThresholdInput" type="number" min="0" max="255" step="1" value="140" />
+        </label>
+        <label class="field">
+          <span class="label">最小辺長</span>
+          <input class="input" id="candidateMinSizeInput" type="number" min="1" step="1" value="4" />
+        </label>
+        <label class="field">
+          <span class="label">最大辺長</span>
+          <input class="input" id="candidateMaxSizeInput" type="number" min="1" step="1" value="22" />
+        </label>
+        <label class="field">
+          <span class="label">黒画素率</span>
+          <input class="input" id="candidateFillRatioInput" type="number" min="0.1" max="1" step="0.05" value="0.6" />
+        </label>
+        <label class="field">
+          <span class="label">中心黒率</span>
+          <input class="input" id="candidateCenterRatioInput" type="number" min="0.1" max="1" step="0.05" value="0.55" />
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="generateCandidatesBtn" type="button">黒塗り四角候補を生成</button>
+      </div>
+      <div class="status" id="candidateStatus">まだ候補生成は実行していません。</div>
+    </div>
+
+    <div class="card">
+      <h2>手動編集</h2>
       <div class="layout" style="margin-top:12px;">
         <div>
           <div class="canvas-wrap">
             <div class="plan-stage" id="planStage">
               <img id="planImage" class="plan-image" alt="keyplan" />
-              <div class="draft-region" id="draftRegionOverlay"></div>
               <div class="point-layer" id="pointLayer"></div>
             </div>
           </div>
@@ -457,11 +435,6 @@
     let dragState = null;
     let lastDragEndedAt = 0;
     let plannerDataSource = "unknown";
-    let autoDraftState = {
-      region: null,
-      candidates: [],
-      spec: DEFAULT_SPEC
-    };
 
     const siteSelector = document.getElementById("siteSelector");
     const drawingSelector = document.getElementById("drawingSelector");
@@ -469,29 +442,24 @@
     const goFieldBtn = document.getElementById("goFieldBtn");
     const jsonBtn = document.getElementById("jsonBtn");
     const resetPositionsBtn = document.getElementById("resetPositionsBtn");
-    const positionsPathText = document.getElementById("positionsPathText");
-    const dataSourceChip = document.getElementById("dataSourceChip");
-
-    const draftSpecInput = document.getElementById("draftSpecInput");
-    const draftRegionXInput = document.getElementById("draftRegionXInput");
-    const draftRegionYInput = document.getElementById("draftRegionYInput");
-    const draftRegionWInput = document.getElementById("draftRegionWInput");
-    const draftRegionHInput = document.getElementById("draftRegionHInput");
-    const draftThresholdInput = document.getElementById("draftThresholdInput");
-    const draftMinAreaInput = document.getElementById("draftMinAreaInput");
-    const draftMaxAreaInput = document.getElementById("draftMaxAreaInput");
-    const draftScaleInput = document.getElementById("draftScaleInput");
-    const draftDefaultRegionBtn = document.getElementById("draftDefaultRegionBtn");
-    const autoDraftBtn = document.getElementById("autoDraftBtn");
-    const draftStatus = document.getElementById("draftStatus");
-    const draftSummaryList = document.getElementById("draftSummaryList");
-
     const planStage = document.getElementById("planStage");
     const planImage = document.getElementById("planImage");
-    const draftRegionOverlay = document.getElementById("draftRegionOverlay");
     const pointLayer = document.getElementById("pointLayer");
     const pointList = document.getElementById("pointList");
     const saveStatus = document.getElementById("saveStatus");
+    const positionsPathText = document.getElementById("positionsPathText");
+    const dataSourceChip = document.getElementById("dataSourceChip");
+    const sourceImageInput = document.getElementById("sourceImageInput");
+    const sourceCanvas = document.getElementById("sourceCanvas");
+    const sourceCanvasStatus = document.getElementById("sourceCanvasStatus");
+    const sourceContext = sourceCanvas.getContext("2d");
+    const candidateThresholdInput = document.getElementById("candidateThresholdInput");
+    const candidateMinSizeInput = document.getElementById("candidateMinSizeInput");
+    const candidateMaxSizeInput = document.getElementById("candidateMaxSizeInput");
+    const candidateFillRatioInput = document.getElementById("candidateFillRatioInput");
+    const candidateCenterRatioInput = document.getElementById("candidateCenterRatioInput");
+    const generateCandidatesBtn = document.getElementById("generateCandidatesBtn");
+    const candidateStatus = document.getElementById("candidateStatus");
     const jsonPreview = document.getElementById("jsonPreview");
     const editorEmpty = document.getElementById("editorEmpty");
     const pointEditor = document.getElementById("pointEditor");
@@ -499,9 +467,8 @@
     const pointSpecInput = document.getElementById("pointSpecInput");
     const pointCoordText = document.getElementById("pointCoordText");
     const deletePointBtn = document.getElementById("deletePointBtn");
-
-    const draftCanvas = document.createElement("canvas");
-    const draftContext = draftCanvas.getContext("2d", { willReadFrequently: true });
+    const candidateCanvas = document.createElement("canvas");
+    const candidateContext = candidateCanvas.getContext("2d", { willReadFrequently: true });
 
     function normalizeDrawingRecord(drawing) {
       const drawingId = String(drawing && drawing.drawingId || "").trim();
@@ -646,8 +613,12 @@
       saveStatus.textContent = message || "";
     }
 
-    function setDraftStatus(message) {
-      draftStatus.textContent = message || "";
+    function setSourceCanvasStatus(message) {
+      sourceCanvasStatus.textContent = message || "";
+    }
+
+    function setCandidateStatus(message) {
+      candidateStatus.textContent = message || "";
     }
 
     function renderDataSourceStatus() {
@@ -662,93 +633,66 @@
       dataSourceChip.textContent = "新規データを編集中";
     }
 
-    function renderDraftSummary() {
-      if (!autoDraftState.candidates.length || !autoDraftState.region) {
-        draftSummaryList.innerHTML = "";
+    function clearSourceCanvas() {
+      sourceCanvas.width = 0;
+      sourceCanvas.height = 0;
+      sourceContext.clearRect(0, 0, 1, 1);
+    }
+
+    function drawImageToSourceCanvas(image) {
+      sourceCanvas.width = image.naturalWidth || image.width;
+      sourceCanvas.height = image.naturalHeight || image.height;
+      sourceContext.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+      sourceContext.drawImage(image, 0, 0, sourceCanvas.width, sourceCanvas.height);
+      setSourceCanvasStatus("元図面を sourceCanvas に描画しました。 " + sourceCanvas.width + " x " + sourceCanvas.height);
+    }
+
+    function loadSourceImageFile(file) {
+      if (!file) {
+        clearSourceCanvas();
+        setSourceCanvasStatus("まだ画像は読み込まれていません。");
         return;
       }
 
-      const region = autoDraftState.region;
-      draftSummaryList.innerHTML = [
-        "<li>候補点数: " + autoDraftState.candidates.length + "</li>",
-        "<li>一括 spec: " + escapeHtml(autoDraftState.spec) + "</li>",
-        "<li>keyplan 範囲: x=" + Math.round(region.x) + ", y=" + Math.round(region.y) + ", w=" + Math.round(region.width) + ", h=" + Math.round(region.height) + "</li>"
-      ].join("");
+      const fileReader = new FileReader();
+      fileReader.onload = function () {
+        const image = new Image();
+        image.onload = function () {
+          drawImageToSourceCanvas(image);
+        };
+        image.onerror = function () {
+          clearSourceCanvas();
+          setSourceCanvasStatus("画像の読み込みに失敗しました。");
+          alert("元図面画像の読み込みに失敗しました。");
+        };
+        image.src = String(fileReader.result || "");
+      };
+      fileReader.onerror = function () {
+        clearSourceCanvas();
+        setSourceCanvasStatus("画像ファイルの読み込みに失敗しました。");
+        alert("元図面画像の読み込みに失敗しました。");
+      };
+      fileReader.readAsDataURL(file);
     }
 
-    function getDefaultDraftRegion() {
-      const width = planImage.naturalWidth || 0;
-      const height = planImage.naturalHeight || 0;
+    function getCommonSpec() {
+      const firstSpec = plannerPoints.find(function (point) {
+        return sanitizeValue(point.spec);
+      });
+      return firstSpec ? firstSpec.spec : DEFAULT_SPEC;
+    }
+
+    function getCandidateSettings() {
       return {
-        x: Math.round(width * 0.52),
-        y: Math.round(height * 0.08),
-        width: Math.max(1, Math.round(width * 0.4)),
-        height: Math.max(1, Math.round(height * 0.42))
+        threshold: Math.max(0, Math.min(255, Number(candidateThresholdInput.value || 140))),
+        minSize: Math.max(1, Number(candidateMinSizeInput.value || 4)),
+        maxSize: Math.max(1, Number(candidateMaxSizeInput.value || 22)),
+        fillRatio: Math.max(0.1, Math.min(1, Number(candidateFillRatioInput.value || 0.6))),
+        centerRatio: Math.max(0.1, Math.min(1, Number(candidateCenterRatioInput.value || 0.55)))
       };
     }
 
-    function syncDraftRegionInputs(region) {
-      draftRegionXInput.value = region.x;
-      draftRegionYInput.value = region.y;
-      draftRegionWInput.value = region.width;
-      draftRegionHInput.value = region.height;
-    }
-
-    function ensureDraftUiDefaults() {
-      if (!planImage.naturalWidth || !planImage.naturalHeight) return;
-      const region = getDefaultDraftRegion();
-      syncDraftRegionInputs(region);
-      if (!draftSpecInput.value) {
-        draftSpecInput.value = DEFAULT_SPEC;
-      }
-    }
-
-    function getDraftSettings() {
-      const imageWidth = planImage.naturalWidth || 0;
-      const imageHeight = planImage.naturalHeight || 0;
-      const defaultRegion = getDefaultDraftRegion();
-
-      const rawX = Number(draftRegionXInput.value || defaultRegion.x);
-      const rawY = Number(draftRegionYInput.value || defaultRegion.y);
-      const x = Math.max(0, Math.min(Math.round(rawX), Math.max(0, imageWidth - 1)));
-      const y = Math.max(0, Math.min(Math.round(rawY), Math.max(0, imageHeight - 1)));
-      const width = Math.max(1, Math.min(Math.round(Number(draftRegionWInput.value || defaultRegion.width)), imageWidth - x));
-      const height = Math.max(1, Math.min(Math.round(Number(draftRegionHInput.value || defaultRegion.height)), imageHeight - y));
-
-      return {
-        spec: sanitizeValue(draftSpecInput.value) || DEFAULT_SPEC,
-        region: { x: x, y: y, width: width, height: height },
-        threshold: Math.max(0, Math.min(255, Number(draftThresholdInput.value || 170))),
-        minArea: Math.max(1, Number(draftMinAreaInput.value || 10)),
-        maxArea: Math.max(1, Number(draftMaxAreaInput.value || 220)),
-        scale: Math.max(0.1, Math.min(1, Number(draftScaleInput.value || 0.35)))
-      };
-    }
-
-    function renderDraftRegionOverlay() {
-      const settings = getDraftSettings();
-      const region = settings.region;
-      if (!planImage.naturalWidth || !planImage.naturalHeight || !region) {
-        draftRegionOverlay.style.display = "none";
-        return;
-      }
-
-      draftRegionOverlay.style.display = "block";
-      draftRegionOverlay.style.left = region.x + "px";
-      draftRegionOverlay.style.top = region.y + "px";
-      draftRegionOverlay.style.width = region.width + "px";
-      draftRegionOverlay.style.height = region.height + "px";
-    }
-
-    function extractSpecDraft(settings) {
-      return settings.spec;
-    }
-
-    function resolveKeyplanRegion(settings) {
-      return settings.region;
-    }
-
-    function computeDarkMask(imageData, threshold) {
+    function buildDarkMask(imageData, threshold) {
       const mask = new Uint8Array(imageData.width * imageData.height);
       for (let index = 0; index < mask.length; index += 1) {
         const offset = index * 4;
@@ -763,14 +707,40 @@
       return mask;
     }
 
-    function detectConnectedComponents(imageData, settings) {
-      const width = imageData.width;
-      const height = imageData.height;
-      const mask = computeDarkMask(imageData, settings.threshold);
+    function computeBoxDarkRatio(mask, width, x, y, boxWidth, boxHeight) {
+      let darkCount = 0;
+      const total = Math.max(1, boxWidth * boxHeight);
+      for (let row = y; row < y + boxHeight; row += 1) {
+        for (let col = x; col < x + boxWidth; col += 1) {
+          if (mask[row * width + col]) {
+            darkCount += 1;
+          }
+        }
+      }
+      return darkCount / total;
+    }
+
+    function detectFilledSquareCandidates() {
+      if (!planImage.naturalWidth || !planImage.naturalHeight) {
+        alert("keyplan 画像の読み込み完了後に実行してください。");
+        return;
+      }
+
+      const settings = getCandidateSettings();
+      const scale = 0.5;
+      const scaledWidth = Math.max(1, Math.round(planImage.naturalWidth * scale));
+      const scaledHeight = Math.max(1, Math.round(planImage.naturalHeight * scale));
+      candidateCanvas.width = scaledWidth;
+      candidateCanvas.height = scaledHeight;
+      candidateContext.clearRect(0, 0, scaledWidth, scaledHeight);
+      candidateContext.drawImage(planImage, 0, 0, scaledWidth, scaledHeight);
+
+      const imageData = candidateContext.getImageData(0, 0, scaledWidth, scaledHeight);
+      const mask = buildDarkMask(imageData, settings.threshold);
       const visited = new Uint8Array(mask.length);
       const queueX = new Int32Array(mask.length);
       const queueY = new Int32Array(mask.length);
-      const results = [];
+      const candidates = [];
       const directions = [
         [1, 0],
         [-1, 0],
@@ -778,9 +748,9 @@
         [0, -1]
       ];
 
-      for (let y = 0; y < height; y += 1) {
-        for (let x = 0; x < width; x += 1) {
-          const startIndex = y * width + x;
+      for (let y = 0; y < scaledHeight; y += 1) {
+        for (let x = 0; x < scaledWidth; x += 1) {
+          const startIndex = y * scaledWidth + x;
           if (!mask[startIndex] || visited[startIndex]) continue;
 
           let head = 0;
@@ -788,6 +758,10 @@
           let area = 0;
           let sumX = 0;
           let sumY = 0;
+          let minX = x;
+          let maxX = x;
+          let minY = y;
+          let maxY = y;
 
           visited[startIndex] = 1;
           queueX[tail] = x;
@@ -802,12 +776,16 @@
             area += 1;
             sumX += currentX;
             sumY += currentY;
+            minX = Math.min(minX, currentX);
+            maxX = Math.max(maxX, currentX);
+            minY = Math.min(minY, currentY);
+            maxY = Math.max(maxY, currentY);
 
             directions.forEach(function (direction) {
               const nextX = currentX + direction[0];
               const nextY = currentY + direction[1];
-              if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) return;
-              const nextIndex = nextY * width + nextX;
+              if (nextX < 0 || nextY < 0 || nextX >= scaledWidth || nextY >= scaledHeight) return;
+              const nextIndex = nextY * scaledWidth + nextX;
               if (!mask[nextIndex] || visited[nextIndex]) return;
               visited[nextIndex] = 1;
               queueX[tail] = nextX;
@@ -816,120 +794,50 @@
             });
           }
 
-          if (area < settings.minArea || area > settings.maxArea) continue;
+          const boxWidth = maxX - minX + 1;
+          const boxHeight = maxY - minY + 1;
+          const minSide = Math.min(boxWidth, boxHeight);
+          const maxSide = Math.max(boxWidth, boxHeight);
+          const boxArea = boxWidth * boxHeight;
+          const fillRatio = area / Math.max(1, boxArea);
+          const aspectRatio = minSide / Math.max(1, maxSide);
 
-          results.push({
-            x: sumX / area,
-            y: sumY / area,
-            area: area
+          if (minSide < settings.minSize || maxSide > settings.maxSize) continue;
+          if (aspectRatio < 0.7) continue;
+          if (fillRatio < settings.fillRatio) continue;
+
+          const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.5));
+          const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.5));
+          const centerX = minX + Math.floor((boxWidth - centerBoxWidth) / 2);
+          const centerY = minY + Math.floor((boxHeight - centerBoxHeight) / 2);
+          const centerDarkRatio = computeBoxDarkRatio(mask, scaledWidth, centerX, centerY, centerBoxWidth, centerBoxHeight);
+          if (centerDarkRatio < settings.centerRatio) continue;
+
+          candidates.push({
+            x: (sumX / area) / scale,
+            y: (sumY / area) / scale
           });
         }
       }
 
-      return results;
-    }
+      if (!candidates.length) {
+        setCandidateStatus("候補点を検出できませんでした。しきい値やサイズ条件を調整してください。");
+        return;
+      }
 
-    function mergeNearbyCandidates(candidates, mergeDistance) {
-      const merged = [];
-      candidates.forEach(function (candidate) {
-        const existing = merged.find(function (item) {
-          return Math.hypot(item.x - candidate.x, item.y - candidate.y) <= mergeDistance;
-        });
-
-        if (existing) {
-          existing.x = (existing.x + candidate.x) / 2;
-          existing.y = (existing.y + candidate.y) / 2;
-          existing.area += candidate.area;
-          return;
-        }
-
-        merged.push({
-          x: candidate.x,
-          y: candidate.y,
-          area: candidate.area
-        });
-      });
-      return merged;
-    }
-
-    function detectPointCandidates(region, settings) {
-      const scaledWidth = Math.max(1, Math.round(region.width * settings.scale));
-      const scaledHeight = Math.max(1, Math.round(region.height * settings.scale));
-
-      draftCanvas.width = scaledWidth;
-      draftCanvas.height = scaledHeight;
-      draftContext.clearRect(0, 0, scaledWidth, scaledHeight);
-      draftContext.drawImage(
-        planImage,
-        region.x,
-        region.y,
-        region.width,
-        region.height,
-        0,
-        0,
-        scaledWidth,
-        scaledHeight
-      );
-
-      const imageData = draftContext.getImageData(0, 0, scaledWidth, scaledHeight);
-      const components = detectConnectedComponents(imageData, settings);
-      const merged = mergeNearbyCandidates(components, 10);
-
-      return merged.map(function (candidate) {
-        return {
-          x: region.x + candidate.x / settings.scale,
-          y: region.y + candidate.y / settings.scale
-        };
-      });
-    }
-
-    function buildDraftPlannerPoints(candidates, spec) {
-      return candidates.map(function (candidate, index) {
+      const commonSpec = getCommonSpec();
+      plannerPoints = candidates.map(function (candidate, index) {
         return normalizePoint({
           id: "p" + String(index + 1).padStart(3, "0"),
           x: candidate.x,
           y: candidate.y,
-          spec: spec
+          spec: commonSpec
         }, index);
       });
-    }
-
-    function applyGeneratedDraft(points, settings) {
-      plannerPoints = points;
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
-      autoDraftState = {
-        region: settings.region,
-        candidates: points.slice(),
-        spec: settings.spec
-      };
-      savePlannerPoints("自動たたき台を点データへ取り込みました。");
-      renderDraftSummary();
+      savePlannerPoints("黒塗り四角候補を生成しました。");
       renderPlanner();
-    }
-
-    function generateDraftPoints() {
-      if (!planImage.naturalWidth || !planImage.naturalHeight) {
-        alert("画像の読み込み完了後に実行してください。");
-        return;
-      }
-
-      const settings = getDraftSettings();
-      const spec = extractSpecDraft(settings);
-      const region = resolveKeyplanRegion(settings);
-      const candidates = detectPointCandidates(region, settings);
-
-      if (!candidates.length) {
-        autoDraftState = { region: region, candidates: [], spec: spec };
-        renderDraftSummary();
-        renderDraftRegionOverlay();
-        setDraftStatus("候補点を検出できませんでした。keyplan 範囲やしきい値を調整してください。");
-        return;
-      }
-
-      const nextPoints = buildDraftPlannerPoints(candidates, spec);
-      applyGeneratedDraft(nextPoints, { region: region, spec: spec });
-      renderDraftRegionOverlay();
-      setDraftStatus("自動たたき台を生成しました。不要点の削除・追加・微調整を続けてください。");
+      setCandidateStatus("黒塗り四角候補を " + candidates.length + " 点生成しました。不要点は手動で削除してください。");
     }
 
     function savePlannerPoints(message) {
@@ -1044,7 +952,6 @@
       renderPointEditor();
       updateJsonPreview();
       renderDataSourceStatus();
-      renderDraftRegionOverlay();
     }
 
     function selectPoint(pointId) {
@@ -1085,7 +992,7 @@
         id: createNextPointId(),
         x: coords.x,
         y: coords.y,
-        spec: sanitizeValue(draftSpecInput.value) || DEFAULT_SPEC
+        spec: DEFAULT_SPEC
       }, plannerPoints.length);
       clampPoint(point);
       plannerPoints.push(point);
@@ -1195,16 +1102,8 @@
 
     async function refreshPlanner() {
       plannerDataSource = "unknown";
-      autoDraftState = {
-        region: null,
-        candidates: [],
-        spec: sanitizeValue(draftSpecInput.value) || DEFAULT_SPEC
-      };
       await loadPlanImage();
-      ensureDraftUiDefaults();
       await loadPlannerPoints();
-      renderDraftSummary();
-      setDraftStatus("");
     }
 
     async function handleSiteChange() {
@@ -1261,19 +1160,10 @@
       await loadPlannerPoints();
       setSaveStatus("仮保存をクリアし、positions.json から再読込しました。");
     });
-
-    draftDefaultRegionBtn.addEventListener("click", function () {
-      if (!planImage.naturalWidth || !planImage.naturalHeight) return;
-      syncDraftRegionInputs(getDefaultDraftRegion());
-      renderDraftRegionOverlay();
-      setDraftStatus("右上デフォルト範囲を反映しました。必要に応じて微調整してください。");
+    sourceImageInput.addEventListener("change", function () {
+      loadSourceImageFile(sourceImageInput.files && sourceImageInput.files[0]);
     });
-
-    autoDraftBtn.addEventListener("click", generateDraftPoints);
-
-    [draftRegionXInput, draftRegionYInput, draftRegionWInput, draftRegionHInput].forEach(function (input) {
-      input.addEventListener("input", renderDraftRegionOverlay);
-    });
+    generateCandidatesBtn.addEventListener("click", detectFilledSquareCandidates);
 
     pointList.addEventListener("click", function (event) {
       const target = event.target.closest("[data-point-id]");
