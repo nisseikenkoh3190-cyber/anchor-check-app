@@ -359,18 +359,18 @@
           <input class="input" id="candidateMaxSizeInput" type="number" min="1" step="1" value="22" />
         </label>
         <label class="field">
-          <span class="label">黒画素率</span>
-          <input class="input" id="candidateFillRatioInput" type="number" min="0.1" max="1" step="0.05" value="0.6" />
+          <span class="label">最小充填率</span>
+          <input class="input" id="candidateFillRatioInput" type="number" min="0.05" max="1" step="0.05" value="0.18" />
         </label>
         <label class="field">
-          <span class="label">中心黒率</span>
-          <input class="input" id="candidateCenterRatioInput" type="number" min="0.1" max="1" step="0.05" value="0.55" />
+          <span class="label">最小縦横比</span>
+          <input class="input" id="candidateAspectRatioInput" type="number" min="0.5" max="1" step="0.05" value="0.72" />
         </label>
       </div>
       <div class="btn-row">
-        <button class="btn" id="generateCandidatesBtn" type="button">黒塗り四角候補を生成</button>
+        <button class="btn" id="generateCandidatesBtn" type="button">四角候補を生成</button>
       </div>
-      <div class="status" id="candidateStatus">まだ候補生成は実行していません。</div>
+      <div class="status" id="candidateStatus">まだ候補生成は実行していません。白抜き・黒塗りの小さな四角を対象にします。</div>
     </div>
 
     <div class="card">
@@ -457,7 +457,7 @@
     const candidateMinSizeInput = document.getElementById("candidateMinSizeInput");
     const candidateMaxSizeInput = document.getElementById("candidateMaxSizeInput");
     const candidateFillRatioInput = document.getElementById("candidateFillRatioInput");
-    const candidateCenterRatioInput = document.getElementById("candidateCenterRatioInput");
+    const candidateAspectRatioInput = document.getElementById("candidateAspectRatioInput");
     const generateCandidatesBtn = document.getElementById("generateCandidatesBtn");
     const candidateStatus = document.getElementById("candidateStatus");
     const jsonPreview = document.getElementById("jsonPreview");
@@ -688,7 +688,7 @@
         minSize: Math.max(1, Number(candidateMinSizeInput.value || 4)),
         maxSize: Math.max(1, Number(candidateMaxSizeInput.value || 22)),
         fillRatio: Math.max(0.1, Math.min(1, Number(candidateFillRatioInput.value || 0.6))),
-        centerRatio: Math.max(0.1, Math.min(1, Number(candidateCenterRatioInput.value || 0.55)))
+        aspectRatio: Math.max(0.5, Math.min(1, Number(candidateAspectRatioInput.value || 0.72)))
       };
     }
 
@@ -720,7 +720,26 @@
       return darkCount / total;
     }
 
-    function detectFilledSquareCandidates() {
+    function computeEdgeDarkRatio(mask, width, x, y, boxWidth, boxHeight) {
+      let darkCount = 0;
+      let edgeCount = 0;
+      for (let row = y; row < y + boxHeight; row += 1) {
+        for (let col = x; col < x + boxWidth; col += 1) {
+          const isEdge = row === y
+            || row === y + boxHeight - 1
+            || col === x
+            || col === x + boxWidth - 1;
+          if (!isEdge) continue;
+          edgeCount += 1;
+          if (mask[row * width + col]) {
+            darkCount += 1;
+          }
+        }
+      }
+      return edgeCount ? darkCount / edgeCount : 0;
+    }
+
+    function detectSquareCandidates() {
       if (!planImage.naturalWidth || !planImage.naturalHeight) {
         alert("keyplan 画像の読み込み完了後に実行してください。");
         return;
@@ -801,17 +820,21 @@
           const boxArea = boxWidth * boxHeight;
           const fillRatio = area / Math.max(1, boxArea);
           const aspectRatio = minSide / Math.max(1, maxSide);
+          const edgeDarkRatio = computeEdgeDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
 
           if (minSide < settings.minSize || maxSide > settings.maxSize) continue;
-          if (aspectRatio < 0.7) continue;
+          if (aspectRatio < settings.aspectRatio) continue;
           if (fillRatio < settings.fillRatio) continue;
+          if (edgeDarkRatio < 0.25) continue;
 
-          const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.5));
-          const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.5));
+          const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.45));
+          const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.45));
           const centerX = minX + Math.floor((boxWidth - centerBoxWidth) / 2);
           const centerY = minY + Math.floor((boxHeight - centerBoxHeight) / 2);
           const centerDarkRatio = computeBoxDarkRatio(mask, scaledWidth, centerX, centerY, centerBoxWidth, centerBoxHeight);
-          if (centerDarkRatio < settings.centerRatio) continue;
+          const isFilledSquare = centerDarkRatio >= 0.2;
+          const isHollowSquare = centerDarkRatio <= 0.15 && edgeDarkRatio >= 0.45;
+          if (!isFilledSquare && !isHollowSquare) continue;
 
           candidates.push({
             x: (sumX / area) / scale,
@@ -835,9 +858,9 @@
         }, index);
       });
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
-      savePlannerPoints("黒塗り四角候補を生成しました。");
+      savePlannerPoints("四角候補を生成しました。");
       renderPlanner();
-      setCandidateStatus("黒塗り四角候補を " + candidates.length + " 点生成しました。不要点は手動で削除してください。");
+      setCandidateStatus("四角候補を " + candidates.length + " 点生成しました。白抜き・黒塗りの両方を含みます。不要点は手動で削除してください。");
     }
 
     function savePlannerPoints(message) {
@@ -1163,7 +1186,7 @@
     sourceImageInput.addEventListener("change", function () {
       loadSourceImageFile(sourceImageInput.files && sourceImageInput.files[0]);
     });
-    generateCandidatesBtn.addEventListener("click", detectFilledSquareCandidates);
+    generateCandidatesBtn.addEventListener("click", detectSquareCandidates);
 
     pointList.addEventListener("click", function (event) {
       const target = event.target.closest("[data-point-id]");
