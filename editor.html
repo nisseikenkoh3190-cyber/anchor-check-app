@@ -197,6 +197,13 @@
       display: block;
       max-width: none;
     }
+    .candidate-region-overlay {
+      position: absolute;
+      border: 2px dashed rgba(37, 99, 235, 0.85);
+      background: rgba(37, 99, 235, 0.12);
+      pointer-events: none;
+      display: none;
+    }
     .point-layer {
       position: absolute;
       inset: 0;
@@ -404,6 +411,7 @@
           <div class="canvas-wrap">
             <div class="plan-stage" id="planStage">
               <img id="planImage" class="plan-image" alt="keyplan" />
+              <div class="candidate-region-overlay" id="candidateRegionOverlay"></div>
               <div class="point-layer" id="pointLayer"></div>
             </div>
           </div>
@@ -468,6 +476,7 @@
     const resetPositionsBtn = document.getElementById("resetPositionsBtn");
     const planStage = document.getElementById("planStage");
     const planImage = document.getElementById("planImage");
+    const candidateRegionOverlay = document.getElementById("candidateRegionOverlay");
     const pointLayer = document.getElementById("pointLayer");
     const pointList = document.getElementById("pointList");
     const saveStatus = document.getElementById("saveStatus");
@@ -749,6 +758,20 @@
       const width = Math.max(1, Math.min(Math.round(Number(candidateRegionWInput.value || fallback.width)), Math.max(1, imageWidth - x)));
       const height = Math.max(1, Math.min(Math.round(Number(candidateRegionHInput.value || fallback.height)), Math.max(1, imageHeight - y)));
       return { x: x, y: y, width: width, height: height };
+    }
+
+    function renderCandidateRegionOverlay() {
+      if (!planImage.naturalWidth || !planImage.naturalHeight) {
+        candidateRegionOverlay.style.display = "none";
+        return;
+      }
+
+      const region = getCandidateRegion();
+      candidateRegionOverlay.style.display = "block";
+      candidateRegionOverlay.style.left = region.x + "px";
+      candidateRegionOverlay.style.top = region.y + "px";
+      candidateRegionOverlay.style.width = region.width + "px";
+      candidateRegionOverlay.style.height = region.height + "px";
     }
 
     function getCandidateSettings() {
@@ -1050,6 +1073,7 @@
 
     function renderPlanner() {
       positionsPathText.textContent = currentDrawing.positionsFile || "positions.json";
+      renderCandidateRegionOverlay();
       renderPointLayer();
       renderPointList();
       renderPointEditor();
@@ -1270,9 +1294,13 @@
     candidateRegionDefaultBtn.addEventListener("click", function () {
       if (!planImage.naturalWidth || !planImage.naturalHeight) return;
       syncCandidateRegionInputs(getDefaultCandidateRegion());
+      renderCandidateRegionOverlay();
       setCandidateStatus("keyplan 範囲を右上デフォルトに戻しました。");
     });
     generateCandidatesBtn.addEventListener("click", detectSquareCandidates);
+    [candidateRegionXInput, candidateRegionYInput, candidateRegionWInput, candidateRegionHInput].forEach(function (input) {
+      input.addEventListener("input", renderCandidateRegionOverlay);
+    });
 
     pointList.addEventListener("click", function (event) {
       const target = event.target.closest("[data-point-id]");
