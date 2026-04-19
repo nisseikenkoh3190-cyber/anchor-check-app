@@ -345,6 +345,30 @@
     <div class="card">
       <h2>点候補生成</h2>
       <div class="muted">現在は keyplan 画像から候補点を作ります。黒塗り四角を優先し、白抜き四角や細い線の交点を除外しやすい条件で絞ります。</div>
+      <details style="margin-top:12px;">
+        <summary class="label" style="cursor:pointer;">詳細設定: keyplan 範囲</summary>
+        <div class="inline-fields" style="margin-top:10px;">
+          <label class="field">
+            <span class="label">X</span>
+            <input class="input" id="candidateRegionXInput" type="number" min="0" step="1" />
+          </label>
+          <label class="field">
+            <span class="label">Y</span>
+            <input class="input" id="candidateRegionYInput" type="number" min="0" step="1" />
+          </label>
+          <label class="field">
+            <span class="label">W</span>
+            <input class="input" id="candidateRegionWInput" type="number" min="1" step="1" />
+          </label>
+          <label class="field">
+            <span class="label">H</span>
+            <input class="input" id="candidateRegionHInput" type="number" min="1" step="1" />
+          </label>
+          <div class="field" style="align-self:end;">
+            <button class="btn" id="candidateRegionDefaultBtn" type="button">右上デフォルト</button>
+          </div>
+        </div>
+      </details>
       <div class="inline-fields" style="margin-top:12px;">
         <label class="field">
           <span class="label">しきい値</span>
@@ -453,6 +477,11 @@
     const sourceCanvas = document.getElementById("sourceCanvas");
     const sourceCanvasStatus = document.getElementById("sourceCanvasStatus");
     const sourceContext = sourceCanvas.getContext("2d");
+    const candidateRegionXInput = document.getElementById("candidateRegionXInput");
+    const candidateRegionYInput = document.getElementById("candidateRegionYInput");
+    const candidateRegionWInput = document.getElementById("candidateRegionWInput");
+    const candidateRegionHInput = document.getElementById("candidateRegionHInput");
+    const candidateRegionDefaultBtn = document.getElementById("candidateRegionDefaultBtn");
     const candidateThresholdInput = document.getElementById("candidateThresholdInput");
     const candidateMinSizeInput = document.getElementById("candidateMinSizeInput");
     const candidateMaxSizeInput = document.getElementById("candidateMaxSizeInput");
@@ -682,6 +711,46 @@
       return firstSpec ? firstSpec.spec : DEFAULT_SPEC;
     }
 
+    function getDefaultCandidateRegion() {
+      const width = planImage.naturalWidth || 0;
+      const height = planImage.naturalHeight || 0;
+      return {
+        x: Math.round(width * 0.52),
+        y: Math.round(height * 0.08),
+        width: Math.max(1, Math.round(width * 0.4)),
+        height: Math.max(1, Math.round(height * 0.42))
+      };
+    }
+
+    function syncCandidateRegionInputs(region) {
+      candidateRegionXInput.value = region.x;
+      candidateRegionYInput.value = region.y;
+      candidateRegionWInput.value = region.width;
+      candidateRegionHInput.value = region.height;
+    }
+
+    function ensureCandidateRegionDefaults() {
+      if (!planImage.naturalWidth || !planImage.naturalHeight) return;
+      const region = getDefaultCandidateRegion();
+      if (!candidateRegionXInput.value) candidateRegionXInput.value = region.x;
+      if (!candidateRegionYInput.value) candidateRegionYInput.value = region.y;
+      if (!candidateRegionWInput.value) candidateRegionWInput.value = region.width;
+      if (!candidateRegionHInput.value) candidateRegionHInput.value = region.height;
+    }
+
+    function getCandidateRegion() {
+      const imageWidth = planImage.naturalWidth || 0;
+      const imageHeight = planImage.naturalHeight || 0;
+      const fallback = getDefaultCandidateRegion();
+      const rawX = Number(candidateRegionXInput.value || fallback.x);
+      const rawY = Number(candidateRegionYInput.value || fallback.y);
+      const x = Math.max(0, Math.min(Math.round(rawX), Math.max(0, imageWidth - 1)));
+      const y = Math.max(0, Math.min(Math.round(rawY), Math.max(0, imageHeight - 1)));
+      const width = Math.max(1, Math.min(Math.round(Number(candidateRegionWInput.value || fallback.width)), Math.max(1, imageWidth - x)));
+      const height = Math.max(1, Math.min(Math.round(Number(candidateRegionHInput.value || fallback.height)), Math.max(1, imageHeight - y)));
+      return { x: x, y: y, width: width, height: height };
+    }
+
     function getCandidateSettings() {
       return {
         threshold: Math.max(0, Math.min(255, Number(candidateThresholdInput.value || 140))),
@@ -747,12 +816,23 @@
 
       const settings = getCandidateSettings();
       const scale = 0.5;
-      const scaledWidth = Math.max(1, Math.round(planImage.naturalWidth * scale));
-      const scaledHeight = Math.max(1, Math.round(planImage.naturalHeight * scale));
+      const region = getCandidateRegion();
+      const scaledWidth = Math.max(1, Math.round(region.width * scale));
+      const scaledHeight = Math.max(1, Math.round(region.height * scale));
       candidateCanvas.width = scaledWidth;
       candidateCanvas.height = scaledHeight;
       candidateContext.clearRect(0, 0, scaledWidth, scaledHeight);
-      candidateContext.drawImage(planImage, 0, 0, scaledWidth, scaledHeight);
+      candidateContext.drawImage(
+        planImage,
+        region.x,
+        region.y,
+        region.width,
+        region.height,
+        0,
+        0,
+        scaledWidth,
+        scaledHeight
+      );
 
       const imageData = candidateContext.getImageData(0, 0, scaledWidth, scaledHeight);
       const mask = buildDarkMask(imageData, settings.threshold);
@@ -837,8 +917,8 @@
           if (!isFilledSquare && !isHollowSquare) continue;
 
           candidates.push({
-            x: (sumX / area) / scale,
-            y: (sumY / area) / scale
+            x: region.x + (sumX / area) / scale,
+            y: region.y + (sumY / area) / scale
           });
         }
       }
@@ -1126,6 +1206,7 @@
     async function refreshPlanner() {
       plannerDataSource = "unknown";
       await loadPlanImage();
+      ensureCandidateRegionDefaults();
       await loadPlannerPoints();
     }
 
@@ -1185,6 +1266,11 @@
     });
     sourceImageInput.addEventListener("change", function () {
       loadSourceImageFile(sourceImageInput.files && sourceImageInput.files[0]);
+    });
+    candidateRegionDefaultBtn.addEventListener("click", function () {
+      if (!planImage.naturalWidth || !planImage.naturalHeight) return;
+      syncCandidateRegionInputs(getDefaultCandidateRegion());
+      setCandidateStatus("keyplan 範囲を右上デフォルトに戻しました。");
     });
     generateCandidatesBtn.addEventListener("click", detectSquareCandidates);
 
