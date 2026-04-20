@@ -855,6 +855,90 @@
       return mask;
     }
 
+    function countNeighbors(mask, width, height, x, y) {
+      let count = 0;
+      for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          if (offsetX === 0 && offsetY === 0) continue;
+          const nextX = x + offsetX;
+          const nextY = y + offsetY;
+          if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
+          if (mask[nextY * width + nextX]) {
+            count += 1;
+          }
+        }
+      }
+      return count;
+    }
+
+    function removeTinyNoise(mask, width, height) {
+      const filtered = new Uint8Array(mask);
+
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = y * width + x;
+          if (!filtered[index]) continue;
+          const neighbors = countNeighbors(filtered, width, height, x, y);
+          if (neighbors <= 1) {
+            filtered[index] = 0;
+          }
+        }
+      }
+
+      const visited = new Uint8Array(filtered.length);
+      const queueX = new Int32Array(filtered.length);
+      const queueY = new Int32Array(filtered.length);
+      const directions = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+      ];
+
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const startIndex = y * width + x;
+          if (!filtered[startIndex] || visited[startIndex]) continue;
+
+          let head = 0;
+          let tail = 0;
+          const component = [];
+
+          visited[startIndex] = 1;
+          queueX[tail] = x;
+          queueY[tail] = y;
+          tail += 1;
+
+          while (head < tail) {
+            const currentX = queueX[head];
+            const currentY = queueY[head];
+            head += 1;
+            component.push(currentY * width + currentX);
+
+            directions.forEach(function (direction) {
+              const nextX = currentX + direction[0];
+              const nextY = currentY + direction[1];
+              if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) return;
+              const nextIndex = nextY * width + nextX;
+              if (!filtered[nextIndex] || visited[nextIndex]) return;
+              visited[nextIndex] = 1;
+              queueX[tail] = nextX;
+              queueY[tail] = nextY;
+              tail += 1;
+            });
+          }
+
+          if (component.length <= 2) {
+            component.forEach(function (index) {
+              filtered[index] = 0;
+            });
+          }
+        }
+      }
+
+      return filtered;
+    }
+
     function computeBoxDarkRatio(mask, width, x, y, boxWidth, boxHeight) {
       let darkCount = 0;
       const total = Math.max(1, boxWidth * boxHeight);
@@ -947,7 +1031,7 @@
       );
 
       const imageData = candidateContext.getImageData(0, 0, scaledWidth, scaledHeight);
-      const mask = buildDarkMask(imageData, settings.threshold);
+      const mask = removeTinyNoise(buildDarkMask(imageData, settings.threshold), scaledWidth, scaledHeight);
       const visited = new Uint8Array(mask.length);
       const queueX = new Int32Array(mask.length);
       const queueY = new Int32Array(mask.length);
