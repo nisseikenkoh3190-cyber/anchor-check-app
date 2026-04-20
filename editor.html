@@ -224,6 +224,12 @@
       position: absolute;
       inset: 0;
     }
+    .preview-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+    }
     .point {
       position: absolute;
       width: 18px;
@@ -239,6 +245,33 @@
     .point.active {
       background: var(--point-active);
       transform: scale(1.12);
+    }
+    .preview-point {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      margin-left: -8px;
+      margin-top: -8px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+    }
+    .preview-point.current {
+      width: 18px;
+      height: 18px;
+      margin-left: -9px;
+      margin-top: -9px;
+      opacity: 1;
+      z-index: 2;
+    }
+    .preview-point.other {
+      opacity: 0.35;
+    }
+    .preview-point.conflict {
+      background: #ef4444 !important;
+      border-color: #7f1d1d;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24);
+      opacity: 1;
     }
     .point-label {
       position: absolute;
@@ -457,12 +490,17 @@
 
     <div class="card">
       <h2>手動編集</h2>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn primary" id="currentLayerModeBtn" type="button">現在レイヤー表示</button>
+        <button class="btn" id="integratedPreviewModeBtn" type="button">統合プレビュー表示</button>
+      </div>
       <div class="layout" style="margin-top:12px;">
         <div>
           <div class="canvas-wrap">
             <div class="plan-stage" id="planStage">
               <img id="planImage" class="plan-image" alt="keyplan" />
               <div class="candidate-region-overlay" id="candidateRegionOverlay"></div>
+              <div class="preview-layer" id="previewLayer"></div>
               <div class="point-layer" id="pointLayer"></div>
             </div>
           </div>
@@ -547,6 +585,7 @@
     let plannerPoints = [];
     let editorState = null;
     let selectedLayerId = null;
+    let previewMode = "current";
     let selectedPointId = null;
     let dragState = null;
     let lastDragEndedAt = 0;
@@ -561,9 +600,12 @@
     const planStage = document.getElementById("planStage");
     const planImage = document.getElementById("planImage");
     const candidateRegionOverlay = document.getElementById("candidateRegionOverlay");
+    const previewLayer = document.getElementById("previewLayer");
     const pointLayer = document.getElementById("pointLayer");
     const pointList = document.getElementById("pointList");
     const saveStatus = document.getElementById("saveStatus");
+    const currentLayerModeBtn = document.getElementById("currentLayerModeBtn");
+    const integratedPreviewModeBtn = document.getElementById("integratedPreviewModeBtn");
     const positionsPathText = document.getElementById("positionsPathText");
     const dataSourceChip = document.getElementById("dataSourceChip");
     const sourceImageInput = document.getElementById("sourceImageInput");
@@ -891,6 +933,57 @@
         positions: positions,
         warnings: warnings
       };
+    }
+
+    function getSpecColor(spec) {
+      const value = sanitizeValue(spec) || DEFAULT_SPEC;
+      let hash = 0;
+      for (let index = 0; index < value.length; index += 1) {
+        hash = ((hash << 5) - hash) + value.charCodeAt(index);
+        hash |= 0;
+      }
+      const hue = Math.abs(hash) % 360;
+      return "hsl(" + hue + " 70% 48%)";
+    }
+
+    function buildIntegratedPreviewData() {
+      syncCurrentLayerFromPlannerPoints();
+      const groupedByCoordinate = new Map();
+
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          const normalizedPoint = normalizePoint(point);
+          const coordinateKey = Math.round(normalizedPoint.x) + ":" + Math.round(normalizedPoint.y);
+          if (!groupedByCoordinate.has(coordinateKey)) {
+            groupedByCoordinate.set(coordinateKey, []);
+          }
+          groupedByCoordinate.get(coordinateKey).push({
+            layerId: layer.layerId,
+            pageNo: layer.pageNo,
+            pageName: layer.pageName,
+            spec: sanitizeValue(normalizedPoint.spec || layer.spec) || DEFAULT_SPEC,
+            point: normalizedPoint
+          });
+        });
+      });
+
+      return Array.from(groupedByCoordinate.values()).map(function (items) {
+        const specSet = new Set(items.map(function (item) { return item.spec; }));
+        const hasCurrentLayerPoint = items.some(function (item) {
+          return item.layerId === selectedLayerId;
+        });
+        const primary = items.find(function (item) {
+          return item.layerId === selectedLayerId;
+        }) || items[0];
+        return {
+          x: primary.point.x,
+          y: primary.point.y,
+          spec: primary.spec,
+          hasConflict: specSet.size > 1,
+          hasCurrentLayerPoint: hasCurrentLayerPoint,
+          items: items
+        };
+      });
     }
 
     function buildLayerSummaryData() {
@@ -1899,11 +1992,45 @@
       });
     }
 
+    function renderPreviewLayer() {
+      const previewPoints = buildIntegratedPreviewData();
+      previewLayer.innerHTML = "";
+
+      previewPoints.forEach(function (previewPoint) {
+        const marker = document.createElement("div");
+        marker.className = "preview-point"
+          + (previewPoint.hasCurrentLayerPoint ? " current" : " other")
+          + (previewPoint.hasConflict ? " conflict" : "");
+        marker.style.left = previewPoint.x + "px";
+        marker.style.top = previewPoint.y + "px";
+        if (!previewPoint.hasConflict) {
+          marker.style.background = getSpecColor(previewPoint.spec);
+        }
+        marker.title = previewPoint.items.map(function (item) {
+          return "P" + item.pageNo + " " + item.pageName + " / " + item.spec + " / " + item.point.id;
+        }).join("\n");
+        previewLayer.appendChild(marker);
+      });
+    }
+
+    function applyPreviewMode() {
+      const isIntegratedMode = previewMode === "integrated";
+      pointLayer.style.display = isIntegratedMode ? "none" : "block";
+      previewLayer.style.display = isIntegratedMode ? "block" : "none";
+      currentLayerModeBtn.classList.toggle("primary", !isIntegratedMode);
+      integratedPreviewModeBtn.classList.toggle("primary", isIntegratedMode);
+      pointIdInput.disabled = isIntegratedMode;
+      pointSpecInput.disabled = isIntegratedMode;
+      deletePointBtn.disabled = isIntegratedMode;
+    }
+
     function renderPlanner() {
       positionsPathText.textContent = currentDrawing.positionsFile || "positions.json";
       renderCandidateRegionOverlay();
       renderLayerList();
       renderPointLayer();
+      renderPreviewLayer();
+      applyPreviewMode();
       renderPointList();
       renderPointEditor();
       updateJsonPreview();
@@ -2154,6 +2281,7 @@
     });
 
     pointLayer.addEventListener("pointerdown", function (event) {
+      if (previewMode === "integrated") return;
       const target = event.target.closest(".point");
       if (!target) return;
       event.preventDefault();
@@ -2164,6 +2292,7 @@
     });
 
     pointLayer.addEventListener("pointermove", function (event) {
+      if (previewMode === "integrated") return;
       if (!dragState) return;
       const point = getSelectedPoint();
       if (!point || point.id !== dragState.pointId) return;
@@ -2188,6 +2317,7 @@
     pointLayer.addEventListener("pointercancel", finishDrag);
 
     planStage.addEventListener("click", function (event) {
+      if (previewMode === "integrated") return;
       if (Date.now() - lastDragEndedAt < 250) return;
       if (event.target.closest(".point")) return;
       addPointAt(event.clientX, event.clientY);
@@ -2221,6 +2351,18 @@
       const target = event.target.closest("[data-layer-id]");
       if (!target || target.dataset.layerId === selectedLayerId) return;
       switchToLayer(target.dataset.layerId, "レイヤーを切り替えました。");
+    });
+
+    currentLayerModeBtn.addEventListener("click", function () {
+      previewMode = "current";
+      renderPlanner();
+      setSaveStatus("現在レイヤー表示に切り替えました。");
+    });
+
+    integratedPreviewModeBtn.addEventListener("click", function () {
+      previewMode = "integrated";
+      renderPlanner();
+      setSaveStatus("統合プレビュー表示に切り替えました。");
     });
 
     addLayerBtn.addEventListener("click", addNewLayer);
