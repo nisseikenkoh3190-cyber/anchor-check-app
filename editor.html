@@ -547,6 +547,7 @@
           <div>
             <h3>レイヤー一覧</h3>
             <div class="btn-row">
+              <button class="btn" id="nextLayerBtn" type="button">次ページ追加</button>
               <button class="btn" id="addLayerBtn" type="button">新規レイヤー追加</button>
               <button class="btn" id="duplicateLayerBtn" type="button">レイヤー複製</button>
               <button class="btn" id="deleteLayerBtn" type="button">レイヤー削除</button>
@@ -642,6 +643,7 @@
     const pointCoordText = document.getElementById("pointCoordText");
     const deletePointBtn = document.getElementById("deletePointBtn");
     const layerList = document.getElementById("layerList");
+    const nextLayerBtn = document.getElementById("nextLayerBtn");
     const addLayerBtn = document.getElementById("addLayerBtn");
     const duplicateLayerBtn = document.getElementById("duplicateLayerBtn");
     const deleteLayerBtn = document.getElementById("deleteLayerBtn");
@@ -707,6 +709,10 @@
 
     function getPlannerStorageKey() {
       return "planner_positions_" + currentSite.siteId + "_" + currentDrawing.drawingId;
+    }
+
+    function getCandidateRegionStorageKey() {
+      return "planner_candidate_region_" + currentSite.siteId;
     }
 
     function getDownloadedFileName() {
@@ -1020,6 +1026,9 @@
       selectedLayerId = layerId;
       syncPlannerPointsFromCurrentLayer();
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
+      if (hasTargetSetCount) {
+        setCandidateStatus("候補生成: setCount " + targetSetCount + " / 抽出候補数 " + mergedCandidates.length + " / 採用候補数 " + finalCandidates.length + " / 不足件数 " + shortageCount + "。");
+      }
       renderPlanner();
       if (message) {
         setSaveStatus(message);
@@ -1053,6 +1062,22 @@
       const layer = createLayer();
       switchToLayer(layer.layerId, "新しいレイヤーを追加しました。");
       savePlannerPoints("新しいレイヤーを追加しました。");
+    }
+
+    function addNextLayer() {
+      syncCurrentLayerFromPlannerPoints();
+      const currentLayer = getCurrentLayerState();
+      const layer = createLayer({
+        pageNo: getNextDefaultPageNo(),
+        pageName: "page-" + getNextDefaultPageNo(),
+        spec: currentLayer.spec || DEFAULT_SPEC,
+        setCount: currentLayer.setCount || 0,
+        draftPoints: [],
+        confirmedPoints: []
+      });
+      switchToLayer(layer.layerId, "次ページ用レイヤーを追加しました。");
+      savePlannerPoints("次ページ用レイヤーを追加しました。");
+      setCandidateStatus("前回の keyplan 範囲を引き継いで次ページへ進めます。");
     }
 
     function duplicateCurrentLayer() {
@@ -1149,6 +1174,11 @@
         "上限適用後件数: " + stats.limitedToTopN,
         "最終採用数: " + stats.accepted
       ];
+
+      lines.push("setCount: " + stats.targetSetCount);
+      lines.push("抽出候補数: " + stats.extractedCandidateCount);
+      lines.push("採用候補数: " + stats.appliedCandidateCount);
+      lines.push("不足件数: " + stats.shortageCount);
 
       if (stats.sample) {
         lines.push("");
@@ -1368,13 +1398,34 @@
       candidateRegionHInput.value = region.height;
     }
 
+    function normalizeCandidateRegion(region) {
+      const fallback = getDefaultCandidateRegion();
+      const x = Math.max(0, Math.round(Number(region && region.x != null ? region.x : fallback.x)));
+      const y = Math.max(0, Math.round(Number(region && region.y != null ? region.y : fallback.y)));
+      const width = Math.max(1, Math.round(Number(region && region.width != null ? region.width : fallback.width)));
+      const height = Math.max(1, Math.round(Number(region && region.height != null ? region.height : fallback.height)));
+      return { x: x, y: y, width: width, height: height };
+    }
+
+    function loadStoredCandidateRegion() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(getCandidateRegionStorageKey()) || "null");
+        if (!stored) return null;
+        return normalizeCandidateRegion(stored);
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function saveCandidateRegionPreset() {
+      if (!currentSite || !planImage.naturalWidth || !planImage.naturalHeight) return;
+      localStorage.setItem(getCandidateRegionStorageKey(), JSON.stringify(normalizeCandidateRegion(getCandidateRegion())));
+    }
+
     function ensureCandidateRegionDefaults() {
       if (!planImage.naturalWidth || !planImage.naturalHeight) return;
-      const region = getDefaultCandidateRegion();
-      if (!candidateRegionXInput.value) candidateRegionXInput.value = region.x;
-      if (!candidateRegionYInput.value) candidateRegionYInput.value = region.y;
-      if (!candidateRegionWInput.value) candidateRegionWInput.value = region.width;
-      if (!candidateRegionHInput.value) candidateRegionHInput.value = region.height;
+      const region = loadStoredCandidateRegion() || getDefaultCandidateRegion();
+      syncCandidateRegionInputs(region);
     }
 
     function getCandidateRegion() {
@@ -1402,6 +1453,7 @@
       candidateRegionOverlay.style.top = region.y + "px";
       candidateRegionOverlay.style.width = region.width + "px";
       candidateRegionOverlay.style.height = region.height + "px";
+      saveCandidateRegionPreset();
     }
 
     function getCandidateSettings() {
@@ -1646,6 +1698,10 @@
         passedHollow: 0,
         passedStructural: 0,
         passedPriorityFilter: 0,
+        targetSetCount: 0,
+        extractedCandidateCount: 0,
+        appliedCandidateCount: 0,
+        shortageCount: 0,
         limitedToTopN: 0,
         accepted: 0,
         sample: null,
@@ -1829,8 +1885,19 @@
       const mergedCandidates = mergeNearbyCandidatesByRelativeSize(
         prioritizedCandidates.length ? prioritizedCandidates : candidates
       );
-      const finalCandidates = mergedCandidates.slice(0, MAX_FINAL_CANDIDATES);
+      const currentLayer = getCurrentLayerState();
+      const targetSetCount = Math.max(0, Number(currentLayer.setCount || 0));
+      const hasTargetSetCount = targetSetCount > 0;
+      const appliedLimit = hasTargetSetCount ? targetSetCount : MAX_FINAL_CANDIDATES;
+      const finalCandidates = mergedCandidates.slice(0, appliedLimit);
+      const shortageCount = hasTargetSetCount
+        ? Math.max(0, targetSetCount - finalCandidates.length)
+        : 0;
       debugStats.passedPriorityFilter = prioritizedCandidates.length;
+      debugStats.targetSetCount = targetSetCount;
+      debugStats.extractedCandidateCount = mergedCandidates.length;
+      debugStats.appliedCandidateCount = finalCandidates.length;
+      debugStats.shortageCount = shortageCount;
       debugStats.limitedToTopN = finalCandidates.length;
       debugStats.accepted = finalCandidates.length;
       setCandidateDebug(debugStats);
@@ -2369,6 +2436,7 @@
       setSaveStatus("統合プレビュー表示に切り替えました。");
     });
 
+    nextLayerBtn.addEventListener("click", addNextLayer);
     addLayerBtn.addEventListener("click", addNewLayer);
     duplicateLayerBtn.addEventListener("click", duplicateCurrentLayer);
     deleteLayerBtn.addEventListener("click", function () {
