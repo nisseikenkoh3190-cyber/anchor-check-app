@@ -702,6 +702,7 @@
       if (stats.sample) {
         lines.push("");
         lines.push("代表候補 1 件:");
+        lines.push("bbox: " + stats.sample.boxWidth + " x " + stats.sample.boxHeight);
         lines.push("面積: " + stats.sample.area);
         lines.push("縦横比: " + stats.sample.aspectRatio.toFixed(3));
         lines.push("外周黒率: " + stats.sample.edgeDarkRatio.toFixed(3));
@@ -710,6 +711,14 @@
         lines.push("四隅黒率: " + stats.sample.cornerDarkRatio.toFixed(3));
         lines.push("中心黒率: " + stats.sample.centerDarkRatio.toFixed(3));
         lines.push("structuralScore: " + stats.sample.structuralScore.toFixed(3));
+      }
+
+      if (stats.aspectRejectedSample) {
+        lines.push("");
+        lines.push("縦横比で除外された代表候補:");
+        lines.push("bbox: " + stats.aspectRejectedSample.boxWidth + " x " + stats.aspectRejectedSample.boxHeight);
+        lines.push("面積: " + stats.aspectRejectedSample.area);
+        lines.push("縦横比: " + stats.aspectRejectedSample.aspectRatio.toFixed(3));
       }
 
       candidateDebugText.textContent = lines.join("\n");
@@ -1047,7 +1056,8 @@
         passedHollow: 0,
         passedStructural: 0,
         accepted: 0,
-        sample: null
+        sample: null,
+        aspectRejectedSample: null
       };
       const directions = [
         [1, 0],
@@ -1114,6 +1124,8 @@
           const horizontalEdgeStrength = Math.min(sideDarkRatios.top, sideDarkRatios.bottom);
           const verticalEdgeStrength = Math.min(sideDarkRatios.left, sideDarkRatios.right);
           const cornerDarkRatio = computeCornerDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
+          const isSmallCandidate = boxWidth <= 3 || boxHeight <= 3;
+          const effectiveAspectRatio = isSmallCandidate ? 0.4 : settings.aspectRatio;
           debugStats.totalScanned += 1;
 
           // 面積・辺長条件は一時的に無効化して、候補の拾え方を確認する。
@@ -1121,8 +1133,16 @@
           //   debugStats.rejectedBySize += 1;
           //   continue;
           // }
-          if (aspectRatio < settings.aspectRatio) {
+          if (aspectRatio < effectiveAspectRatio) {
             debugStats.rejectedByAspect += 1;
+            if (!debugStats.aspectRejectedSample) {
+              debugStats.aspectRejectedSample = {
+                boxWidth: boxWidth,
+                boxHeight: boxHeight,
+                area: area,
+                aspectRatio: aspectRatio
+              };
+            }
             continue;
           }
           if (fillRatio < settings.fillRatio) {
@@ -1158,6 +1178,8 @@
 
           if (!debugStats.sample) {
             debugStats.sample = {
+              boxWidth: boxWidth,
+              boxHeight: boxHeight,
               area: area,
               aspectRatio: aspectRatio,
               edgeDarkRatio: edgeDarkRatio,
