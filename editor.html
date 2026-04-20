@@ -340,6 +340,15 @@
       box-shadow: inset 0 0 0 1px var(--point-active);
       background: #eff6ff;
     }
+    .layer-item.diff-warning {
+      border-color: #fca5a5;
+      background: #fef2f2;
+    }
+    .layer-item.diff-warning.active {
+      border-color: #ef4444;
+      box-shadow: inset 0 0 0 1px #ef4444;
+      background: #fee2e2;
+    }
     .layer-item-title {
       display: flex;
       justify-content: space-between;
@@ -350,6 +359,10 @@
     .layer-item-meta {
       font-size: 12px;
       color: var(--muted);
+    }
+    .layer-item-meta.diff-warning {
+      color: #b91c1c;
+      font-weight: 700;
     }
     .empty {
       padding: 16px;
@@ -1281,10 +1294,12 @@
           const isActive = layer.layerId === selectedLayerId;
           const confirmedCount = Array.isArray(layer.confirmedPoints) ? layer.confirmedPoints.length : 0;
           const diff = confirmedCount - (layer.setCount || 0);
+          const diffLabel = (diff > 0 ? "+" : "") + diff;
+          const hasDiff = diff !== 0;
           return [
-            '<button class="layer-item' + (isActive ? " active" : "") + '" type="button" data-layer-id="' + escapeHtml(layer.layerId) + '">',
+            '<button class="layer-item' + (isActive ? " active" : "") + (hasDiff ? " diff-warning" : "") + '" type="button" data-layer-id="' + escapeHtml(layer.layerId) + '">',
             '<span class="layer-item-title"><span>P' + escapeHtml(layer.pageNo) + " " + escapeHtml(layer.pageName) + '</span><span>' + escapeHtml(layer.spec || DEFAULT_SPEC) + "</span></span>",
-            '<span class="layer-item-meta">confirmed: ' + confirmedCount + ' / setCount: ' + (layer.setCount || 0) + " / diff: " + diff + "</span>",
+            '<span class="layer-item-meta' + (hasDiff ? " diff-warning" : "") + '">confirmed: ' + confirmedCount + ' / setCount: ' + (layer.setCount || 0) + " / diff: " + diffLabel + "</span>",
             "</button>"
           ].join("");
         })
