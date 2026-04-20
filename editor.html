@@ -966,20 +966,23 @@
           if (aspectRatio < settings.aspectRatio) continue;
           if (fillRatio < settings.fillRatio) continue;
           if (edgeDarkRatio < 0.25) continue;
-          if (horizontalEdgeStrength < 0.2 || verticalEdgeStrength < 0.2) continue;
-          if (cornerDarkRatio < 0.12) continue;
+          if (Math.max(horizontalEdgeStrength, verticalEdgeStrength) < 0.12) continue;
 
           const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.45));
           const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.45));
           const centerX = minX + Math.floor((boxWidth - centerBoxWidth) / 2);
           const centerY = minY + Math.floor((boxHeight - centerBoxHeight) / 2);
           const centerDarkRatio = computeBoxDarkRatio(mask, scaledWidth, centerX, centerY, centerBoxWidth, centerBoxHeight);
-          const isFilledSquare = centerDarkRatio >= 0.2;
+          const structuralScore = (
+            edgeDarkRatio
+            + Math.max(horizontalEdgeStrength, verticalEdgeStrength)
+            + cornerDarkRatio
+          ) / 3;
+          const isFilledSquare = centerDarkRatio >= 0.18;
           const isHollowSquare = centerDarkRatio <= 0.15
-            && edgeDarkRatio >= 0.45
-            && horizontalEdgeStrength >= 0.3
-            && verticalEdgeStrength >= 0.3;
-          if (!isFilledSquare && !isHollowSquare) continue;
+            && edgeDarkRatio >= 0.35
+            && Math.max(horizontalEdgeStrength, verticalEdgeStrength) >= 0.18;
+          if (!isFilledSquare && !isHollowSquare && structuralScore < 0.18) continue;
 
           candidates.push({
             x: region.x + (sumX / area) / scale,
