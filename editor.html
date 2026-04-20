@@ -831,6 +831,39 @@
       return edgeCount ? darkCount / edgeCount : 0;
     }
 
+    function computeSideDarkRatios(mask, width, x, y, boxWidth, boxHeight) {
+      let topDark = 0;
+      let bottomDark = 0;
+      let leftDark = 0;
+      let rightDark = 0;
+
+      for (let col = x; col < x + boxWidth; col += 1) {
+        if (mask[y * width + col]) topDark += 1;
+        if (mask[(y + boxHeight - 1) * width + col]) bottomDark += 1;
+      }
+      for (let row = y; row < y + boxHeight; row += 1) {
+        if (mask[row * width + x]) leftDark += 1;
+        if (mask[row * width + (x + boxWidth - 1)]) rightDark += 1;
+      }
+
+      return {
+        top: topDark / Math.max(1, boxWidth),
+        bottom: bottomDark / Math.max(1, boxWidth),
+        left: leftDark / Math.max(1, boxHeight),
+        right: rightDark / Math.max(1, boxHeight)
+      };
+    }
+
+    function computeCornerDarkRatio(mask, width, x, y, boxWidth, boxHeight) {
+      const cornerWidth = Math.max(1, Math.floor(boxWidth * 0.25));
+      const cornerHeight = Math.max(1, Math.floor(boxHeight * 0.25));
+      const topLeft = computeBoxDarkRatio(mask, width, x, y, cornerWidth, cornerHeight);
+      const topRight = computeBoxDarkRatio(mask, width, x + boxWidth - cornerWidth, y, cornerWidth, cornerHeight);
+      const bottomLeft = computeBoxDarkRatio(mask, width, x, y + boxHeight - cornerHeight, cornerWidth, cornerHeight);
+      const bottomRight = computeBoxDarkRatio(mask, width, x + boxWidth - cornerWidth, y + boxHeight - cornerHeight, cornerWidth, cornerHeight);
+      return (topLeft + topRight + bottomLeft + bottomRight) / 4;
+    }
+
     function detectSquareCandidates() {
       if (!planImage.naturalWidth || !planImage.naturalHeight) {
         alert("keyplan 画像の読み込み完了後に実行してください。");
@@ -924,11 +957,17 @@
           const fillRatio = area / Math.max(1, boxArea);
           const aspectRatio = minSide / Math.max(1, maxSide);
           const edgeDarkRatio = computeEdgeDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
+          const sideDarkRatios = computeSideDarkRatios(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
+          const horizontalEdgeStrength = Math.min(sideDarkRatios.top, sideDarkRatios.bottom);
+          const verticalEdgeStrength = Math.min(sideDarkRatios.left, sideDarkRatios.right);
+          const cornerDarkRatio = computeCornerDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
 
           if (minSide < settings.minSize || maxSide > settings.maxSize) continue;
           if (aspectRatio < settings.aspectRatio) continue;
           if (fillRatio < settings.fillRatio) continue;
           if (edgeDarkRatio < 0.25) continue;
+          if (horizontalEdgeStrength < 0.2 || verticalEdgeStrength < 0.2) continue;
+          if (cornerDarkRatio < 0.12) continue;
 
           const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.45));
           const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.45));
@@ -936,7 +975,10 @@
           const centerY = minY + Math.floor((boxHeight - centerBoxHeight) / 2);
           const centerDarkRatio = computeBoxDarkRatio(mask, scaledWidth, centerX, centerY, centerBoxWidth, centerBoxHeight);
           const isFilledSquare = centerDarkRatio >= 0.2;
-          const isHollowSquare = centerDarkRatio <= 0.15 && edgeDarkRatio >= 0.45;
+          const isHollowSquare = centerDarkRatio <= 0.15
+            && edgeDarkRatio >= 0.45
+            && horizontalEdgeStrength >= 0.3
+            && verticalEdgeStrength >= 0.3;
           if (!isFilledSquare && !isHollowSquare) continue;
 
           candidates.push({
