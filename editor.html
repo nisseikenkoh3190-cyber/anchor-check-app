@@ -696,6 +696,8 @@
         "黒塗り四角判定で通過: " + stats.passedFilled,
         "白抜き四角判定で通過: " + stats.passedHollow,
         "structuralScore で通過: " + stats.passedStructural,
+        "優先フィルタ通過数: " + stats.passedPriorityFilter,
+        "上限適用後件数: " + stats.limitedToTopN,
         "最終採用数: " + stats.accepted
       ];
 
@@ -1055,6 +1057,8 @@
         passedFilled: 0,
         passedHollow: 0,
         passedStructural: 0,
+        passedPriorityFilter: 0,
+        limitedToTopN: 0,
         accepted: 0,
         sample: null,
         aspectRejectedSample: null
@@ -1200,21 +1204,51 @@
 
           candidates.push({
             x: region.x + (sumX / area) / scale,
-            y: region.y + (sumY / area) / scale
+            y: region.y + (sumY / area) / scale,
+            centerDarkRatio: centerDarkRatio,
+            edgeDarkRatio: edgeDarkRatio,
+            structuralScore: structuralScore,
+            isFilledSquare: isFilledSquare,
+            isHollowSquare: isHollowSquare
           });
-          debugStats.accepted += 1;
         }
       }
 
+      const MAX_FINAL_CANDIDATES = 14;
+      const prioritizedCandidates = candidates
+        .map(function (candidate) {
+          const priorityScore = (
+            candidate.centerDarkRatio * 1.4
+            + candidate.structuralScore * 0.8
+            + candidate.edgeDarkRatio * 0.3
+            + (candidate.isFilledSquare ? 0.35 : 0)
+            - (candidate.isHollowSquare ? 0.08 : 0)
+          );
+          return Object.assign({}, candidate, {
+            priorityScore: priorityScore
+          });
+        })
+        .filter(function (candidate) {
+          return candidate.isFilledSquare
+            || candidate.centerDarkRatio >= 0.25
+            || (candidate.isHollowSquare && candidate.edgeDarkRatio >= 0.5);
+        })
+        .sort(function (left, right) {
+          return right.priorityScore - left.priorityScore;
+        });
+      const finalCandidates = (prioritizedCandidates.length ? prioritizedCandidates : candidates).slice(0, MAX_FINAL_CANDIDATES);
+      debugStats.passedPriorityFilter = prioritizedCandidates.length;
+      debugStats.limitedToTopN = finalCandidates.length;
+      debugStats.accepted = finalCandidates.length;
       setCandidateDebug(debugStats);
 
-      if (!candidates.length) {
+      if (!finalCandidates.length) {
         setCandidateStatus("候補点を検出できませんでした。しきい値やサイズ条件を調整してください。");
         return;
       }
 
       const commonSpec = getCommonSpec();
-      plannerPoints = candidates.map(function (candidate, index) {
+      plannerPoints = finalCandidates.map(function (candidate, index) {
         return normalizePoint({
           id: "p" + String(index + 1).padStart(3, "0"),
           x: candidate.x,
@@ -1225,7 +1259,7 @@
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
       savePlannerPoints("四角候補を生成しました。");
       renderPlanner();
-      setCandidateStatus("四角候補を " + candidates.length + " 点生成しました。白抜き・黒塗りの両方を含みます。不要点は手動で削除してください。");
+      setCandidateStatus("四角候補を " + finalCandidates.length + " 点生成しました。黒塗り寄りを優先し、上位 " + MAX_FINAL_CANDIDATES + " 件までに絞り込んでいます。");
     }
 
     function savePlannerPoints(message) {
