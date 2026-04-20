@@ -1124,8 +1124,11 @@
           const horizontalEdgeStrength = Math.min(sideDarkRatios.top, sideDarkRatios.bottom);
           const verticalEdgeStrength = Math.min(sideDarkRatios.left, sideDarkRatios.right);
           const cornerDarkRatio = computeCornerDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
-          const isSmallCandidate = boxWidth <= 3 || boxHeight <= 3;
-          const effectiveAspectRatio = isSmallCandidate ? 0.4 : settings.aspectRatio;
+          const isCompactSmallCandidate = boxWidth >= 2
+            && boxHeight >= 2
+            && boxWidth <= 3
+            && boxHeight <= 3;
+          const effectiveAspectRatio = isCompactSmallCandidate ? 0.4 : settings.aspectRatio;
           debugStats.totalScanned += 1;
 
           // 面積・辺長条件は一時的に無効化して、候補の拾え方を確認する。
