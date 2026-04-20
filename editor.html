@@ -167,6 +167,22 @@
       margin-top: 10px;
       line-height: 1.5;
     }
+    .debug-box {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .debug-box pre {
+      margin: 8px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+    }
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 340px;
@@ -402,6 +418,10 @@
         <button class="btn" id="generateCandidatesBtn" type="button">四角候補を生成</button>
       </div>
       <div class="status" id="candidateStatus">まだ候補生成は実行していません。白抜き・黒塗りの小さな四角を対象にします。</div>
+      <div class="debug-box">
+        <div class="label">候補生成デバッグ</div>
+        <pre id="candidateDebugText">まだ候補生成は実行していません。</pre>
+      </div>
     </div>
 
     <div class="card">
@@ -498,6 +518,7 @@
     const candidateAspectRatioInput = document.getElementById("candidateAspectRatioInput");
     const generateCandidatesBtn = document.getElementById("generateCandidatesBtn");
     const candidateStatus = document.getElementById("candidateStatus");
+    const candidateDebugText = document.getElementById("candidateDebugText");
     const jsonPreview = document.getElementById("jsonPreview");
     const editorEmpty = document.getElementById("editorEmpty");
     const pointEditor = document.getElementById("pointEditor");
@@ -657,6 +678,41 @@
 
     function setCandidateStatus(message) {
       candidateStatus.textContent = message || "";
+    }
+
+    function setCandidateDebug(stats) {
+      if (!stats) {
+        candidateDebugText.textContent = "まだ候補生成は実行していません。";
+        return;
+      }
+
+      const lines = [
+        "候補総数: " + stats.totalScanned,
+        "面積条件で除外: " + stats.rejectedBySize,
+        "縦横比で除外: " + stats.rejectedByAspect,
+        "充填率で除外: " + stats.rejectedByFill,
+        "外周黒率で除外: " + stats.rejectedByEdge,
+        "辺黒率で除外: " + stats.rejectedBySide,
+        "黒塗り四角判定で通過: " + stats.passedFilled,
+        "白抜き四角判定で通過: " + stats.passedHollow,
+        "structuralScore で通過: " + stats.passedStructural,
+        "最終採用数: " + stats.accepted
+      ];
+
+      if (stats.sample) {
+        lines.push("");
+        lines.push("代表候補 1 件:");
+        lines.push("面積: " + stats.sample.area);
+        lines.push("縦横比: " + stats.sample.aspectRatio.toFixed(3));
+        lines.push("外周黒率: " + stats.sample.edgeDarkRatio.toFixed(3));
+        lines.push("上下辺黒率: " + stats.sample.horizontalEdgeStrength.toFixed(3));
+        lines.push("左右辺黒率: " + stats.sample.verticalEdgeStrength.toFixed(3));
+        lines.push("四隅黒率: " + stats.sample.cornerDarkRatio.toFixed(3));
+        lines.push("中心黒率: " + stats.sample.centerDarkRatio.toFixed(3));
+        lines.push("structuralScore: " + stats.sample.structuralScore.toFixed(3));
+      }
+
+      candidateDebugText.textContent = lines.join("\n");
     }
 
     function renderDataSourceStatus() {
@@ -896,6 +952,19 @@
       const queueX = new Int32Array(mask.length);
       const queueY = new Int32Array(mask.length);
       const candidates = [];
+      const debugStats = {
+        totalScanned: 0,
+        rejectedBySize: 0,
+        rejectedByAspect: 0,
+        rejectedByFill: 0,
+        rejectedByEdge: 0,
+        rejectedBySide: 0,
+        passedFilled: 0,
+        passedHollow: 0,
+        passedStructural: 0,
+        accepted: 0,
+        sample: null
+      };
       const directions = [
         [1, 0],
         [-1, 0],
@@ -961,12 +1030,28 @@
           const horizontalEdgeStrength = Math.min(sideDarkRatios.top, sideDarkRatios.bottom);
           const verticalEdgeStrength = Math.min(sideDarkRatios.left, sideDarkRatios.right);
           const cornerDarkRatio = computeCornerDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
+          debugStats.totalScanned += 1;
 
-          if (minSide < settings.minSize || maxSide > settings.maxSize) continue;
-          if (aspectRatio < settings.aspectRatio) continue;
-          if (fillRatio < settings.fillRatio) continue;
-          if (edgeDarkRatio < 0.25) continue;
-          if (Math.max(horizontalEdgeStrength, verticalEdgeStrength) < 0.12) continue;
+          if (minSide < settings.minSize || maxSide > settings.maxSize) {
+            debugStats.rejectedBySize += 1;
+            continue;
+          }
+          if (aspectRatio < settings.aspectRatio) {
+            debugStats.rejectedByAspect += 1;
+            continue;
+          }
+          if (fillRatio < settings.fillRatio) {
+            debugStats.rejectedByFill += 1;
+            continue;
+          }
+          if (edgeDarkRatio < 0.25) {
+            debugStats.rejectedByEdge += 1;
+            continue;
+          }
+          if (Math.max(horizontalEdgeStrength, verticalEdgeStrength) < 0.12) {
+            debugStats.rejectedBySide += 1;
+            continue;
+          }
 
           const centerBoxWidth = Math.max(1, Math.floor(boxWidth * 0.45));
           const centerBoxHeight = Math.max(1, Math.floor(boxHeight * 0.45));
@@ -982,14 +1067,36 @@
           const isHollowSquare = centerDarkRatio <= 0.15
             && edgeDarkRatio >= 0.35
             && Math.max(horizontalEdgeStrength, verticalEdgeStrength) >= 0.18;
-          if (!isFilledSquare && !isHollowSquare && structuralScore < 0.18) continue;
+          if (isFilledSquare) debugStats.passedFilled += 1;
+          if (isHollowSquare) debugStats.passedHollow += 1;
+          if (structuralScore >= 0.18) debugStats.passedStructural += 1;
+
+          if (!debugStats.sample) {
+            debugStats.sample = {
+              area: area,
+              aspectRatio: aspectRatio,
+              edgeDarkRatio: edgeDarkRatio,
+              horizontalEdgeStrength: horizontalEdgeStrength,
+              verticalEdgeStrength: verticalEdgeStrength,
+              cornerDarkRatio: cornerDarkRatio,
+              centerDarkRatio: centerDarkRatio,
+              structuralScore: structuralScore
+            };
+          }
+
+          if (!isFilledSquare && !isHollowSquare && structuralScore < 0.18) {
+            continue;
+          }
 
           candidates.push({
             x: region.x + (sumX / area) / scale,
             y: region.y + (sumY / area) / scale
           });
+          debugStats.accepted += 1;
         }
       }
+
+      setCandidateDebug(debugStats);
 
       if (!candidates.length) {
         setCandidateStatus("候補点を検出できませんでした。しきい値やサイズ条件を調整してください。");
