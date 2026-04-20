@@ -291,6 +291,37 @@
       font-size: 12px;
       color: var(--muted);
     }
+    .layer-list {
+      display: grid;
+      gap: 8px;
+    }
+    .layer-item {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+    }
+    .layer-item.active {
+      border-color: var(--point-active);
+      box-shadow: inset 0 0 0 1px var(--point-active);
+      background: #eff6ff;
+    }
+    .layer-item-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .layer-item-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
     .empty {
       padding: 16px;
       border: 1px dashed var(--border);
@@ -467,8 +498,26 @@
           </div>
 
           <div>
+            <h3>レイヤー一覧</h3>
+            <div class="btn-row">
+              <button class="btn" id="addLayerBtn" type="button">新規レイヤー追加</button>
+              <button class="btn" id="duplicateLayerBtn" type="button">レイヤー複製</button>
+              <button class="btn" id="deleteLayerBtn" type="button">レイヤー削除</button>
+            </div>
+            <div id="layerList" class="layer-list" style="margin-top:10px;"></div>
+          </div>
+
+          <div>
             <h3>レイヤー集計</h3>
             <label class="field">
+              <span class="label">pageName</span>
+              <input class="input" id="layerPageNameInput" type="text" placeholder="page-1" />
+            </label>
+            <label class="field" style="margin-top:10px;">
+              <span class="label">pageNo</span>
+              <input class="input" id="layerPageNoInput" type="number" min="1" step="1" />
+            </label>
+            <label class="field" style="margin-top:10px;">
               <span class="label">layer spec</span>
               <input class="input" id="layerSpecInput" type="text" placeholder="EB350-4-30" />
             </label>
@@ -497,6 +546,7 @@
     let currentDrawing = null;
     let plannerPoints = [];
     let editorState = null;
+    let selectedLayerId = null;
     let selectedPointId = null;
     let dragState = null;
     let lastDragEndedAt = 0;
@@ -540,6 +590,12 @@
     const pointSpecInput = document.getElementById("pointSpecInput");
     const pointCoordText = document.getElementById("pointCoordText");
     const deletePointBtn = document.getElementById("deletePointBtn");
+    const layerList = document.getElementById("layerList");
+    const addLayerBtn = document.getElementById("addLayerBtn");
+    const duplicateLayerBtn = document.getElementById("duplicateLayerBtn");
+    const deleteLayerBtn = document.getElementById("deleteLayerBtn");
+    const layerPageNameInput = document.getElementById("layerPageNameInput");
+    const layerPageNoInput = document.getElementById("layerPageNoInput");
     const layerSpecInput = document.getElementById("layerSpecInput");
     const layerSetCountInput = document.getElementById("layerSetCountInput");
     const layerSummary = document.getElementById("layerSummary");
@@ -673,21 +729,21 @@
       };
     }
 
-    function getCurrentPageNo() {
-      return Math.max(1, currentSite.drawings.findIndex(function (drawing) {
-        return drawing.drawingId === currentDrawing.drawingId;
-      }) + 1);
+    function getNextDefaultPageNo() {
+      const state = ensureEditorState();
+      return Math.max(1, state.layers.length + 1);
     }
 
-    function getCurrentLayerId() {
-      return currentSite.siteId + ":" + currentDrawing.drawingId;
+    function createLayerId() {
+      return "layer_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
     }
 
     function createDefaultLayerState() {
+      const pageNo = getNextDefaultPageNo();
       return {
-        layerId: getCurrentLayerId(),
-        pageNo: getCurrentPageNo(),
-        pageName: currentDrawing.drawingName || currentDrawing.drawingId,
+        layerId: createLayerId(),
+        pageNo: pageNo,
+        pageName: "page-" + pageNo,
         spec: DEFAULT_SPEC,
         setCount: 0,
         draftPoints: [],
@@ -725,17 +781,28 @@
       return editorState;
     }
 
-    function getCurrentLayerState() {
+    function ensureSelectedLayer() {
       const state = ensureEditorState();
-      let layer = state.layers.find(function (item) {
-        return item.layerId === getCurrentLayerId();
-      });
-      if (!layer) {
-        layer = createDefaultLayerState();
+      if (!state.layers.length) {
+        const layer = createDefaultLayerState();
         state.layers.push(layer);
+        selectedLayerId = layer.layerId;
+        return layer;
       }
-      layer.pageNo = getCurrentPageNo();
-      layer.pageName = currentDrawing.drawingName || currentDrawing.drawingId;
+
+      const selectedLayer = state.layers.find(function (layer) {
+        return layer.layerId === selectedLayerId;
+      });
+      if (selectedLayer) {
+        return selectedLayer;
+      }
+
+      selectedLayerId = state.layers[0].layerId;
+      return state.layers[0];
+    }
+
+    function getCurrentLayerState() {
+      const layer = ensureSelectedLayer();
       if (!sanitizeValue(layer.spec)) {
         layer.spec = DEFAULT_SPEC;
       }
@@ -851,6 +918,96 @@
         warningCount: masterData.warnings.length,
         warnings: masterData.warnings
       };
+    }
+
+    function switchToLayer(layerId, message) {
+      syncCurrentLayerFromPlannerPoints();
+      selectedLayerId = layerId;
+      syncPlannerPointsFromCurrentLayer();
+      selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
+      renderPlanner();
+      if (message) {
+        setSaveStatus(message);
+      }
+    }
+
+    function createLayer(options) {
+      const state = ensureEditorState();
+      const currentLayer = state.layers.find(function (layer) {
+        return layer.layerId === selectedLayerId;
+      });
+      const pageNo = options && options.pageNo != null ? options.pageNo : getNextDefaultPageNo();
+      const pageName = sanitizeValue(options && options.pageName || "") || ("page-" + pageNo);
+      const spec = sanitizeValue(options && options.spec || currentLayer && currentLayer.spec || DEFAULT_SPEC) || DEFAULT_SPEC;
+      const setCount = Math.max(0, Math.round(Number(options && options.setCount != null ? options.setCount : 0)));
+      const layer = normalizeLayerState({
+        layerId: createLayerId(),
+        pageNo: pageNo,
+        pageName: pageName,
+        spec: spec,
+        setCount: setCount,
+        draftPoints: Array.isArray(options && options.draftPoints) ? options.draftPoints : [],
+        confirmedPoints: Array.isArray(options && options.confirmedPoints) ? options.confirmedPoints : []
+      });
+      state.layers.push(layer);
+      return layer;
+    }
+
+    function addNewLayer() {
+      syncCurrentLayerFromPlannerPoints();
+      const layer = createLayer();
+      switchToLayer(layer.layerId, "新しいレイヤーを追加しました。");
+      savePlannerPoints("新しいレイヤーを追加しました。");
+    }
+
+    function duplicateCurrentLayer() {
+      const currentLayer = getCurrentLayerState();
+      let nextPointNumber = 0;
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          const matched = /^p(\d+)$/i.exec(point.id);
+          if (!matched) return;
+          nextPointNumber = Math.max(nextPointNumber, Number(matched[1]));
+        });
+      });
+      const duplicatedConfirmedPoints = currentLayer.confirmedPoints.map(function (point) {
+        nextPointNumber += 1;
+        return normalizePoint({
+          id: "p" + String(nextPointNumber).padStart(3, "0"),
+          x: point.x,
+          y: point.y,
+          spec: point.spec
+        });
+      });
+      const duplicatedLayer = createLayer({
+        pageNo: getNextDefaultPageNo(),
+        pageName: sanitizeValue(currentLayer.pageName) ? currentLayer.pageName + "-copy" : "page-" + getNextDefaultPageNo(),
+        spec: currentLayer.spec,
+        setCount: currentLayer.setCount,
+        draftPoints: currentLayer.draftPoints.map(normalizePoint),
+        confirmedPoints: duplicatedConfirmedPoints
+      });
+      switchToLayer(duplicatedLayer.layerId, "レイヤーを複製しました。");
+      savePlannerPoints("レイヤーを複製しました。");
+    }
+
+    function deleteSelectedLayer() {
+      const state = ensureEditorState();
+      if (state.layers.length <= 1) {
+        alert("最後の1レイヤーは削除できません。");
+        return;
+      }
+      const currentLayer = getCurrentLayerState();
+      const index = state.layers.findIndex(function (layer) {
+        return layer.layerId === currentLayer.layerId;
+      });
+      state.layers.splice(index, 1);
+      const fallbackLayer = state.layers[Math.max(0, index - 1)] || state.layers[0];
+      selectedLayerId = fallbackLayer.layerId;
+      syncPlannerPointsFromCurrentLayer();
+      selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
+      savePlannerPoints("レイヤーを削除しました。");
+      renderPlanner();
     }
 
     function getSelectedPoint() {
@@ -991,6 +1148,8 @@
     function renderLayerSummary() {
       const summary = buildLayerSummaryData();
       const layer = summary.currentLayer;
+      layerPageNameInput.value = layer.pageName || "";
+      layerPageNoInput.value = String(layer.pageNo || 1);
       layerSpecInput.value = layer.spec || DEFAULT_SPEC;
       layerSetCountInput.value = String(layer.setCount || 0);
 
@@ -1024,8 +1183,46 @@
       layerSummary.textContent = lines.join("\n");
     }
 
+    function renderLayerList() {
+      const state = ensureEditorState();
+      if (!state.layers.length) {
+        layerList.innerHTML = '<div class="empty">レイヤーはまだありません。</div>';
+        return;
+      }
+
+      layerList.innerHTML = state.layers
+        .slice()
+        .sort(function (left, right) {
+          return left.pageNo - right.pageNo;
+        })
+        .map(function (layer) {
+          const isActive = layer.layerId === selectedLayerId;
+          const confirmedCount = Array.isArray(layer.confirmedPoints) ? layer.confirmedPoints.length : 0;
+          const diff = confirmedCount - (layer.setCount || 0);
+          return [
+            '<button class="layer-item' + (isActive ? " active" : "") + '" type="button" data-layer-id="' + escapeHtml(layer.layerId) + '">',
+            '<span class="layer-item-title"><span>P' + escapeHtml(layer.pageNo) + " " + escapeHtml(layer.pageName) + '</span><span>' + escapeHtml(layer.spec || DEFAULT_SPEC) + "</span></span>",
+            '<span class="layer-item-meta">confirmed: ' + confirmedCount + ' / setCount: ' + (layer.setCount || 0) + " / diff: " + diff + "</span>",
+            "</button>"
+          ].join("");
+        })
+        .join("");
+    }
+
     function updateCurrentLayerMetaField(field, value) {
       const layer = getCurrentLayerState();
+
+      if (field === "pageName") {
+        layer.pageName = sanitizeValue(value) || ("page-" + layer.pageNo);
+      }
+
+      if (field === "pageNo") {
+        const nextPageNo = Math.max(1, Math.round(Number(value || layer.pageNo || 1)));
+        layer.pageNo = nextPageNo;
+        if (!sanitizeValue(layer.pageName) || /^page-\d+$/i.test(layer.pageName)) {
+          layer.pageName = "page-" + nextPageNo;
+        }
+      }
 
       if (field === "spec") {
         const nextSpec = sanitizeValue(value) || DEFAULT_SPEC;
@@ -1587,6 +1784,7 @@
             version: 2,
             layers: stored.layers.map(normalizeLayerState)
           };
+          selectedLayerId = editorState.layers[0] && editorState.layers[0].layerId || null;
           sourcePoints = getCurrentLayerState().confirmedPoints;
           plannerDataSource = "localStorage";
         } else if (Array.isArray(stored) && stored.length) {
@@ -1624,6 +1822,7 @@
             }
           }
         } catch (_error) {
+          selectedLayerId = null;
           sourcePoints = [];
         }
       }
@@ -1633,6 +1832,7 @@
       }
 
       ensureEditorState();
+      ensureSelectedLayer();
       syncPlannerPointsFromCurrentLayer();
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
       renderPlanner();
@@ -1702,6 +1902,7 @@
     function renderPlanner() {
       positionsPathText.textContent = currentDrawing.positionsFile || "positions.json";
       renderCandidateRegionOverlay();
+      renderLayerList();
       renderPointLayer();
       renderPointList();
       renderPointEditor();
@@ -1717,10 +1918,12 @@
 
     function createNextPointId() {
       let max = 0;
-      plannerPoints.forEach(function (point) {
-        const matched = /^p(\d+)$/i.exec(point.id);
-        if (!matched) return;
-        max = Math.max(max, Number(matched[1]));
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          const matched = /^p(\d+)$/i.exec(point.id);
+          if (!matched) return;
+          max = Math.max(max, Number(matched[1]));
+        });
       });
       return "p" + String(max + 1).padStart(3, "0");
     }
@@ -1802,8 +2005,15 @@
       const errors = [];
       const seenIds = new Set();
       const masterData = buildConfirmedPositionsMaster();
+      const pointsToValidate = [];
 
-      plannerPoints.forEach(function (point, index) {
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          pointsToValidate.push(point);
+        });
+      });
+
+      pointsToValidate.forEach(function (point, index) {
         const rowLabel = point.id || "point#" + String(index + 1);
         if (!sanitizeValue(point.spec)) {
           errors.push(rowLabel + ": spec が空欄です。");
@@ -1991,12 +2201,34 @@
       updateSelectedPointField("spec", pointSpecInput.value);
     });
 
+    layerPageNameInput.addEventListener("change", function () {
+      updateCurrentLayerMetaField("pageName", layerPageNameInput.value);
+    });
+
+    layerPageNoInput.addEventListener("change", function () {
+      updateCurrentLayerMetaField("pageNo", layerPageNoInput.value);
+    });
+
     layerSpecInput.addEventListener("change", function () {
       updateCurrentLayerMetaField("spec", layerSpecInput.value);
     });
 
     layerSetCountInput.addEventListener("change", function () {
       updateCurrentLayerMetaField("setCount", layerSetCountInput.value);
+    });
+
+    layerList.addEventListener("click", function (event) {
+      const target = event.target.closest("[data-layer-id]");
+      if (!target || target.dataset.layerId === selectedLayerId) return;
+      switchToLayer(target.dataset.layerId, "レイヤーを切り替えました。");
+    });
+
+    addLayerBtn.addEventListener("click", addNewLayer);
+    duplicateLayerBtn.addEventListener("click", duplicateCurrentLayer);
+    deleteLayerBtn.addEventListener("click", function () {
+      const currentLayer = getCurrentLayerState();
+      if (!confirm("選択中のレイヤー " + currentLayer.pageName + " を削除しますか？")) return;
+      deleteSelectedLayer();
     });
 
     deletePointBtn.addEventListener("click", function () {
