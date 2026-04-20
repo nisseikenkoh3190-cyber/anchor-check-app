@@ -257,15 +257,11 @@
       box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
     }
     .preview-point.current {
-      width: 18px;
-      height: 18px;
-      margin-left: -9px;
-      margin-top: -9px;
-      opacity: 1;
+      opacity: 0.92;
       z-index: 2;
     }
     .preview-point.other {
-      opacity: 0.35;
+      opacity: 0.82;
     }
     .preview-point.conflict {
       background: #ef4444 !important;
@@ -935,15 +931,8 @@
       };
     }
 
-    function getSpecColor(spec) {
-      const value = sanitizeValue(spec) || DEFAULT_SPEC;
-      let hash = 0;
-      for (let index = 0; index < value.length; index += 1) {
-        hash = ((hash << 5) - hash) + value.charCodeAt(index);
-        hash |= 0;
-      }
-      const hue = Math.abs(hash) % 360;
-      return "hsl(" + hue + " 70% 48%)";
+    function getPreviewPointColor() {
+      return "#2563eb";
     }
 
     function buildIntegratedPreviewData() {
@@ -2004,7 +1993,7 @@
         marker.style.left = previewPoint.x + "px";
         marker.style.top = previewPoint.y + "px";
         if (!previewPoint.hasConflict) {
-          marker.style.background = getSpecColor(previewPoint.spec);
+          marker.style.background = getPreviewPointColor();
         }
         marker.title = previewPoint.items.map(function (item) {
           return "P" + item.pageNo + " " + item.pageName + " / " + item.spec + " / " + item.point.id;
