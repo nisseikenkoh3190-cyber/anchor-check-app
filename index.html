@@ -344,15 +344,15 @@
 
     function normalizePositionRecord(position){
       const id = String(position?.id || "").trim();
-      const displayName = String(position?.displayName || "").trim();
+      const displayName = String(position?.displayName || id).trim();
       const gridX = String(position?.gridX || "").trim();
       const gridY = String(position?.gridY || "").trim();
       const label = String(position?.label || "").trim();
-      const requiredType = String(position?.requiredType || "").trim();
+      const requiredType = String(position?.requiredType || position?.spec || "").trim();
       const x = Number(position?.x);
       const y = Number(position?.y);
 
-      if (!id || !displayName || !requiredType) return null;
+      if (!id || !requiredType) return null;
       if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
       if (x < 0 || x > 1 || y < 0 || y > 1) return null;
 
@@ -561,11 +561,11 @@
 
       return rawPositions.map(position => normalizePositionRecord({
         id: position?.id,
-        displayName: position?.id,
+        displayName: position?.displayName || position?.id,
         gridX: "",
         gridY: "",
         label: position?.id,
-        requiredType: position?.spec,
+        requiredType: position?.requiredType || position?.spec,
         x: Number(position?.x) / naturalWidth,
         y: Number(position?.y) / naturalHeight
       })).filter(Boolean);
