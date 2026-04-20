@@ -467,6 +467,19 @@
           </div>
 
           <div>
+            <h3>レイヤー集計</h3>
+            <label class="field">
+              <span class="label">layer spec</span>
+              <input class="input" id="layerSpecInput" type="text" placeholder="EB350-4-30" />
+            </label>
+            <label class="field" style="margin-top:10px;">
+              <span class="label">setCount</span>
+              <input class="input" id="layerSetCountInput" type="number" min="0" step="1" />
+            </label>
+            <div id="layerSummary" class="empty" style="margin-top:10px; white-space:pre-wrap;"></div>
+          </div>
+
+          <div>
             <h3>JSONプレビュー</h3>
             <textarea id="jsonPreview" class="textarea" spellcheck="false" readonly></textarea>
           </div>
@@ -483,6 +496,7 @@
     let currentSite = null;
     let currentDrawing = null;
     let plannerPoints = [];
+    let editorState = null;
     let selectedPointId = null;
     let dragState = null;
     let lastDragEndedAt = 0;
@@ -526,6 +540,9 @@
     const pointSpecInput = document.getElementById("pointSpecInput");
     const pointCoordText = document.getElementById("pointCoordText");
     const deletePointBtn = document.getElementById("deletePointBtn");
+    const layerSpecInput = document.getElementById("layerSpecInput");
+    const layerSetCountInput = document.getElementById("layerSetCountInput");
+    const layerSummary = document.getElementById("layerSummary");
     const candidateCanvas = document.createElement("canvas");
     const candidateContext = candidateCanvas.getContext("2d", { willReadFrequently: true });
 
@@ -645,8 +662,195 @@
       const normalizedId = sanitizeValue(point && point.id || fallbackId) || fallbackId;
       const x = Math.round(Number(point && point.x || 0));
       const y = Math.round(Number(point && point.y || 0));
-      const spec = sanitizeValue(point && point.spec || DEFAULT_SPEC) || DEFAULT_SPEC;
+      const spec = sanitizeValue(point && (point.spec || point.requiredType) || DEFAULT_SPEC) || DEFAULT_SPEC;
       return { id: normalizedId, x: x, y: y, spec: spec };
+    }
+
+    function createEmptyEditorState() {
+      return {
+        version: 2,
+        layers: []
+      };
+    }
+
+    function getCurrentPageNo() {
+      return Math.max(1, currentSite.drawings.findIndex(function (drawing) {
+        return drawing.drawingId === currentDrawing.drawingId;
+      }) + 1);
+    }
+
+    function getCurrentLayerId() {
+      return currentSite.siteId + ":" + currentDrawing.drawingId;
+    }
+
+    function createDefaultLayerState() {
+      return {
+        layerId: getCurrentLayerId(),
+        pageNo: getCurrentPageNo(),
+        pageName: currentDrawing.drawingName || currentDrawing.drawingId,
+        spec: DEFAULT_SPEC,
+        setCount: 0,
+        draftPoints: [],
+        confirmedPoints: []
+      };
+    }
+
+    function normalizeLayerState(rawLayer) {
+      const defaultLayer = createDefaultLayerState();
+      const confirmedPoints = Array.isArray(rawLayer && rawLayer.confirmedPoints)
+        ? rawLayer.confirmedPoints.map(normalizePoint)
+        : [];
+      const draftPoints = Array.isArray(rawLayer && rawLayer.draftPoints)
+        ? rawLayer.draftPoints.map(normalizePoint)
+        : [];
+      const rawPageNo = Number(rawLayer && rawLayer.pageNo);
+      const rawSetCount = Number(rawLayer && rawLayer.setCount);
+      return {
+        layerId: sanitizeValue(rawLayer && rawLayer.layerId || defaultLayer.layerId) || defaultLayer.layerId,
+        pageNo: Number.isFinite(rawPageNo) && rawPageNo > 0 ? Math.round(rawPageNo) : defaultLayer.pageNo,
+        pageName: sanitizeValue(rawLayer && rawLayer.pageName || defaultLayer.pageName) || defaultLayer.pageName,
+        spec: sanitizeValue(rawLayer && rawLayer.spec || confirmedPoints[0] && confirmedPoints[0].spec || defaultLayer.spec) || defaultLayer.spec,
+        setCount: Number.isFinite(rawSetCount)
+          ? Math.max(0, Math.round(rawSetCount))
+          : confirmedPoints.length,
+        draftPoints: draftPoints,
+        confirmedPoints: confirmedPoints
+      };
+    }
+
+    function ensureEditorState() {
+      if (!editorState || !Array.isArray(editorState.layers)) {
+        editorState = createEmptyEditorState();
+      }
+      return editorState;
+    }
+
+    function getCurrentLayerState() {
+      const state = ensureEditorState();
+      let layer = state.layers.find(function (item) {
+        return item.layerId === getCurrentLayerId();
+      });
+      if (!layer) {
+        layer = createDefaultLayerState();
+        state.layers.push(layer);
+      }
+      layer.pageNo = getCurrentPageNo();
+      layer.pageName = currentDrawing.drawingName || currentDrawing.drawingId;
+      if (!sanitizeValue(layer.spec)) {
+        layer.spec = DEFAULT_SPEC;
+      }
+      return layer;
+    }
+
+    function syncPlannerPointsFromCurrentLayer() {
+      const layer = getCurrentLayerState();
+      plannerPoints = layer.confirmedPoints.map(normalizePoint);
+      layer.confirmedPoints = plannerPoints.map(normalizePoint);
+    }
+
+    function syncCurrentLayerFromPlannerPoints() {
+      const layer = getCurrentLayerState();
+      layer.confirmedPoints = plannerPoints.map(normalizePoint);
+      if (!sanitizeValue(layer.spec)) {
+        layer.spec = getCommonSpec();
+      }
+    }
+
+    function setDraftPoints(points) {
+      const layer = getCurrentLayerState();
+      const layerSpec = sanitizeValue(layer.spec || getCommonSpec()) || DEFAULT_SPEC;
+      layer.draftPoints = points.map(function (point, index) {
+        return normalizePoint({
+          id: point.id || "d" + String(index + 1).padStart(3, "0"),
+          x: point.x,
+          y: point.y,
+          spec: point.spec || layerSpec
+        }, index);
+      });
+    }
+
+    function buildEditorStorageData() {
+      syncCurrentLayerFromPlannerPoints();
+      return {
+        version: 2,
+        layers: ensureEditorState().layers.map(function (layer) {
+          return normalizeLayerState(layer);
+        })
+      };
+    }
+
+    function buildConfirmedPositionsMaster() {
+      syncCurrentLayerFromPlannerPoints();
+      const warnings = [];
+      const groupedByCoordinate = new Map();
+
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          const coordinateKey = Math.round(point.x) + ":" + Math.round(point.y);
+          if (!groupedByCoordinate.has(coordinateKey)) {
+            groupedByCoordinate.set(coordinateKey, []);
+          }
+          groupedByCoordinate.get(coordinateKey).push({
+            layerId: layer.layerId,
+            pageNo: layer.pageNo,
+            pageName: layer.pageName,
+            spec: sanitizeValue(point.spec || layer.spec) || DEFAULT_SPEC,
+            point: normalizePoint(point)
+          });
+        });
+      });
+
+      const positions = [];
+      groupedByCoordinate.forEach(function (items, coordinateKey) {
+        const specSet = new Set(items.map(function (item) { return item.spec; }));
+        if (specSet.size > 1) {
+          warnings.push("重複警告: " + coordinateKey + " に複数 spec (" + Array.from(specSet).join(", ") + ") が重なっています。");
+          return;
+        }
+        const primary = items[0];
+        positions.push({
+          id: primary.point.id,
+          requiredType: primary.spec,
+          x: Math.round(primary.point.x),
+          y: Math.round(primary.point.y)
+        });
+      });
+
+      positions.sort(function (left, right) {
+        return left.id.localeCompare(right.id, undefined, { numeric: true, sensitivity: "base" });
+      });
+
+      return {
+        positions: positions,
+        warnings: warnings
+      };
+    }
+
+    function buildLayerSummaryData() {
+      syncCurrentLayerFromPlannerPoints();
+      const currentLayer = getCurrentLayerState();
+      const masterData = buildConfirmedPositionsMaster();
+      const specTotals = new Map();
+
+      ensureEditorState().layers.forEach(function (layer) {
+        layer.confirmedPoints.forEach(function (point) {
+          const spec = sanitizeValue(point.spec || layer.spec) || DEFAULT_SPEC;
+          specTotals.set(spec, (specTotals.get(spec) || 0) + 1);
+        });
+      });
+
+      return {
+        currentLayer: currentLayer,
+        currentConfirmedCount: currentLayer.confirmedPoints.length,
+        currentDraftCount: currentLayer.draftPoints.length,
+        countDiff: currentLayer.confirmedPoints.length - currentLayer.setCount,
+        specTotals: Array.from(specTotals.entries()).sort(function (left, right) {
+          return left[0].localeCompare(right[0]);
+        }),
+        totalConfirmedCount: masterData.positions.length,
+        warningCount: masterData.warnings.length,
+        warnings: masterData.warnings
+      };
     }
 
     function getSelectedPoint() {
@@ -654,14 +858,7 @@
     }
 
     function buildExportData() {
-      return plannerPoints.map(function (point) {
-        return {
-          id: point.id,
-          x: Math.round(point.x),
-          y: Math.round(point.y),
-          spec: point.spec
-        };
-      });
+      return buildConfirmedPositionsMaster().positions;
     }
 
     function updateJsonPreview() {
@@ -781,10 +978,82 @@
     }
 
     function getCommonSpec() {
+      const layer = editorState && getCurrentLayerState();
+      if (layer && sanitizeValue(layer.spec)) {
+        return layer.spec;
+      }
       const firstSpec = plannerPoints.find(function (point) {
         return sanitizeValue(point.spec);
       });
       return firstSpec ? firstSpec.spec : DEFAULT_SPEC;
+    }
+
+    function renderLayerSummary() {
+      const summary = buildLayerSummaryData();
+      const layer = summary.currentLayer;
+      layerSpecInput.value = layer.spec || DEFAULT_SPEC;
+      layerSetCountInput.value = String(layer.setCount || 0);
+
+      const lines = [
+        "layerId: " + layer.layerId,
+        "pageNo: " + layer.pageNo,
+        "pageName: " + layer.pageName,
+        "draftPoints: " + summary.currentDraftCount,
+        "confirmedPoints: " + summary.currentConfirmedCount,
+        "setCountとの差分: " + summary.countDiff,
+        "統合後 positions: " + summary.totalConfirmedCount,
+        "warning: " + summary.warningCount
+      ];
+
+      if (summary.specTotals.length) {
+        lines.push("");
+        lines.push("spec 小計:");
+        summary.specTotals.forEach(function (entry) {
+          lines.push(entry[0] + ": " + entry[1]);
+        });
+      }
+
+      if (summary.warnings.length) {
+        lines.push("");
+        lines.push("warnings:");
+        summary.warnings.forEach(function (warning) {
+          lines.push("- " + warning);
+        });
+      }
+
+      layerSummary.textContent = lines.join("\n");
+    }
+
+    function updateCurrentLayerMetaField(field, value) {
+      const layer = getCurrentLayerState();
+
+      if (field === "spec") {
+        const nextSpec = sanitizeValue(value) || DEFAULT_SPEC;
+        layer.spec = nextSpec;
+        plannerPoints = plannerPoints.map(function (point, index) {
+          return normalizePoint({
+            id: point.id,
+            x: point.x,
+            y: point.y,
+            spec: nextSpec
+          }, index);
+        });
+        layer.draftPoints = layer.draftPoints.map(function (point, index) {
+          return normalizePoint({
+            id: point.id,
+            x: point.x,
+            y: point.y,
+            spec: nextSpec
+          }, index);
+        });
+      }
+
+      if (field === "setCount") {
+        layer.setCount = Math.max(0, Math.round(Number(value || 0)));
+      }
+
+      savePlannerPoints("レイヤー情報を更新しました。");
+      renderPlanner();
     }
 
     function getDefaultCandidateRegion() {
@@ -1278,6 +1547,14 @@
       }
 
       const commonSpec = getCommonSpec();
+      setDraftPoints(finalCandidates.map(function (candidate, index) {
+        return {
+          id: "d" + String(index + 1).padStart(3, "0"),
+          x: candidate.x,
+          y: candidate.y,
+          spec: commonSpec
+        };
+      }));
       plannerPoints = finalCandidates.map(function (candidate, index) {
         return normalizePoint({
           id: "p" + String(index + 1).padStart(3, "0"),
@@ -1293,9 +1570,10 @@
     }
 
     function savePlannerPoints(message) {
-      localStorage.setItem(getPlannerStorageKey(), JSON.stringify(buildExportData()));
+      localStorage.setItem(getPlannerStorageKey(), JSON.stringify(buildEditorStorageData()));
       plannerDataSource = "localStorage";
       updateJsonPreview();
+      renderLayerSummary();
       renderDataSourceStatus();
       setSaveStatus(message || "点データを保存しました。");
     }
@@ -1304,11 +1582,24 @@
       let sourcePoints = [];
       try {
         const stored = JSON.parse(localStorage.getItem(getPlannerStorageKey()) || "null");
-        if (Array.isArray(stored) && stored.length) {
-          sourcePoints = stored;
+        if (stored && Array.isArray(stored.layers)) {
+          editorState = {
+            version: 2,
+            layers: stored.layers.map(normalizeLayerState)
+          };
+          sourcePoints = getCurrentLayerState().confirmedPoints;
+          plannerDataSource = "localStorage";
+        } else if (Array.isArray(stored) && stored.length) {
+          editorState = createEmptyEditorState();
+          const layer = getCurrentLayerState();
+          layer.confirmedPoints = stored.map(normalizePoint);
+          layer.spec = layer.confirmedPoints[0] && layer.confirmedPoints[0].spec || DEFAULT_SPEC;
+          layer.setCount = layer.confirmedPoints.length;
+          sourcePoints = layer.confirmedPoints;
           plannerDataSource = "localStorage";
         }
       } catch (_error) {
+        editorState = createEmptyEditorState();
         sourcePoints = [];
       }
 
@@ -1317,8 +1608,18 @@
           const response = await fetch(currentDrawing.positionsFile, { cache: "no-store" });
           if (response.ok) {
             const json = await response.json();
-            if (Array.isArray(json)) {
-              sourcePoints = json;
+            const incomingPoints = Array.isArray(json)
+              ? json
+              : Array.isArray(json && json.positions)
+                ? json.positions
+                : [];
+            if (incomingPoints.length) {
+              editorState = createEmptyEditorState();
+              const layer = getCurrentLayerState();
+              layer.confirmedPoints = incomingPoints.map(normalizePoint);
+              layer.spec = layer.confirmedPoints[0] && layer.confirmedPoints[0].spec || DEFAULT_SPEC;
+              layer.setCount = layer.confirmedPoints.length;
+              sourcePoints = layer.confirmedPoints;
               plannerDataSource = "positionsFile";
             }
           }
@@ -1331,7 +1632,8 @@
         plannerDataSource = "empty";
       }
 
-      plannerPoints = sourcePoints.map(normalizePoint);
+      ensureEditorState();
+      syncPlannerPointsFromCurrentLayer();
       selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
       renderPlanner();
       if (sourcePoints.length) {
@@ -1404,6 +1706,7 @@
       renderPointList();
       renderPointEditor();
       updateJsonPreview();
+      renderLayerSummary();
       renderDataSourceStatus();
     }
 
@@ -1445,7 +1748,7 @@
         id: createNextPointId(),
         x: coords.x,
         y: coords.y,
-        spec: DEFAULT_SPEC
+        spec: getCommonSpec()
       }, plannerPoints.length);
       clampPoint(point);
       plannerPoints.push(point);
@@ -1478,6 +1781,7 @@
 
       if (field === "spec") {
         point.spec = sanitizeValue(value) || DEFAULT_SPEC;
+        getCurrentLayerState().spec = point.spec;
       }
 
       savePlannerPoints("点データを更新しました。");
@@ -1497,6 +1801,7 @@
     function validateBeforeExport() {
       const errors = [];
       const seenIds = new Set();
+      const masterData = buildConfirmedPositionsMaster();
 
       plannerPoints.forEach(function (point, index) {
         const rowLabel = point.id || "point#" + String(index + 1);
@@ -1515,6 +1820,10 @@
         if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
           errors.push(rowLabel + ": x または y が不正です。");
         }
+      });
+
+      masterData.warnings.forEach(function (warning) {
+        errors.push(warning);
       });
 
       return errors;
@@ -1680,6 +1989,14 @@
 
     pointSpecInput.addEventListener("input", function () {
       updateSelectedPointField("spec", pointSpecInput.value);
+    });
+
+    layerSpecInput.addEventListener("change", function () {
+      updateCurrentLayerMetaField("spec", layerSpecInput.value);
+    });
+
+    layerSetCountInput.addEventListener("change", function () {
+      updateCurrentLayerMetaField("setCount", layerSetCountInput.value);
     });
 
     deletePointBtn.addEventListener("click", function () {
