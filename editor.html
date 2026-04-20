@@ -879,7 +879,7 @@
           const index = y * width + x;
           if (!filtered[index]) continue;
           const neighbors = countNeighbors(filtered, width, height, x, y);
-          if (neighbors <= 1) {
+          if (neighbors === 0) {
             filtered[index] = 0;
           }
         }
@@ -928,7 +928,7 @@
             });
           }
 
-          if (component.length <= 2) {
+          if (component.length === 1) {
             component.forEach(function (index) {
               filtered[index] = 0;
             });
