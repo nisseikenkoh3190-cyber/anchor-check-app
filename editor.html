@@ -1116,10 +1116,11 @@
           const cornerDarkRatio = computeCornerDarkRatio(mask, scaledWidth, minX, minY, boxWidth, boxHeight);
           debugStats.totalScanned += 1;
 
-          if (minSide < settings.minSize || maxSide > settings.maxSize) {
-            debugStats.rejectedBySize += 1;
-            continue;
-          }
+          // 面積・辺長条件は一時的に無効化して、候補の拾え方を確認する。
+          // if (minSide < settings.minSize || maxSide > settings.maxSize) {
+          //   debugStats.rejectedBySize += 1;
+          //   continue;
+          // }
           if (aspectRatio < settings.aspectRatio) {
             debugStats.rejectedByAspect += 1;
             continue;
