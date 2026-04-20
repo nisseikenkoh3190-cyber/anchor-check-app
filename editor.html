@@ -1015,6 +1015,31 @@
       return (topLeft + topRight + bottomLeft + bottomRight) / 4;
     }
 
+    function mergeNearbyCandidatesByRelativeSize(candidates) {
+      if (!candidates.length) return [];
+
+      const DISTANCE_SCALE = 0.9;
+      const merged = [];
+
+      candidates.forEach(function (candidate) {
+        const isNearExisting = merged.some(function (keptCandidate) {
+          const averageWidth = (candidate.boxWidth + keptCandidate.boxWidth) / 2;
+          const averageHeight = (candidate.boxHeight + keptCandidate.boxHeight) / 2;
+          const referenceSize = Math.max(1, (averageWidth + averageHeight) / 2);
+          const dx = candidate.x - keptCandidate.x;
+          const dy = candidate.y - keptCandidate.y;
+          const centerDistance = Math.sqrt((dx * dx) + (dy * dy));
+          return centerDistance <= referenceSize * DISTANCE_SCALE;
+        });
+
+        if (!isNearExisting) {
+          merged.push(candidate);
+        }
+      });
+
+      return merged;
+    }
+
     function detectSquareCandidates() {
       if (!planImage.naturalWidth || !planImage.naturalHeight) {
         alert("keyplan 画像の読み込み完了後に実行してください。");
@@ -1205,6 +1230,8 @@
           candidates.push({
             x: region.x + (sumX / area) / scale,
             y: region.y + (sumY / area) / scale,
+            boxWidth: boxWidth / scale,
+            boxHeight: boxHeight / scale,
             centerDarkRatio: centerDarkRatio,
             edgeDarkRatio: edgeDarkRatio,
             structuralScore: structuralScore,
@@ -1236,7 +1263,10 @@
         .sort(function (left, right) {
           return right.priorityScore - left.priorityScore;
         });
-      const finalCandidates = (prioritizedCandidates.length ? prioritizedCandidates : candidates).slice(0, MAX_FINAL_CANDIDATES);
+      const mergedCandidates = mergeNearbyCandidatesByRelativeSize(
+        prioritizedCandidates.length ? prioritizedCandidates : candidates
+      );
+      const finalCandidates = mergedCandidates.slice(0, MAX_FINAL_CANDIDATES);
       debugStats.passedPriorityFilter = prioritizedCandidates.length;
       debugStats.limitedToTopN = finalCandidates.length;
       debugStats.accepted = finalCandidates.length;
