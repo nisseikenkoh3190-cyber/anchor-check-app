@@ -1,104 +1,140 @@
 [
   {
     "id": "p001",
-    "requiredType": "EB350-4-36",
-    "x": 257,
-    "y": 252
+    "requiredType": "EB300-4-30",
+    "x": 137,
+    "y": 68
   },
   {
     "id": "p002",
-    "requiredType": "EB350-4-36",
-    "x": 188,
-    "y": 150
+    "requiredType": "EB300-4-30",
+    "x": 256,
+    "y": 66
   },
   {
     "id": "p003",
-    "requiredType": "EB350-4-36",
-    "x": 347,
-    "y": 151
+    "requiredType": "EB300-4-30",
+    "x": 443,
+    "y": 66
   },
   {
     "id": "p004",
-    "requiredType": "EB350-4-36",
-    "x": 432,
-    "y": 151
+    "requiredType": "EB300-4-30",
+    "x": 560,
+    "y": 68
   },
   {
     "id": "p005",
-    "requiredType": "EB350-4-36",
-    "x": 508,
-    "y": 148
+    "requiredType": "EB300-4-30",
+    "x": 137,
+    "y": 138
   },
   {
     "id": "p006",
-    "requiredType": "EB350-4-36",
-    "x": 264,
-    "y": 90
+    "requiredType": "EB300-4-30",
+    "x": 255,
+    "y": 132
   },
   {
     "id": "p007",
-    "requiredType": "EB350-4-36",
-    "x": 429,
-    "y": 91
+    "requiredType": "EB300-4-30",
+    "x": 348,
+    "y": 134
   },
   {
     "id": "p008",
-    "requiredType": "EB350-4-36",
-    "x": 255,
-    "y": 151
+    "requiredType": "EB300-4-30",
+    "x": 440,
+    "y": 136
   },
   {
     "id": "p009",
-    "requiredType": "EB350-4-36",
-    "x": 143,
-    "y": 150
+    "requiredType": "EB300-4-30",
+    "x": 557,
+    "y": 136
   },
   {
     "id": "p010",
-    "requiredType": "EB350-4-36",
-    "x": 141,
-    "y": 251
+    "requiredType": "EB300-4-30",
+    "x": 136,
+    "y": 269
   },
   {
     "id": "p011",
-    "requiredType": "EB350-4-36",
-    "x": 188,
-    "y": 251
+    "requiredType": "EB300-4-30",
+    "x": 255,
+    "y": 273
   },
   {
     "id": "p012",
-    "requiredType": "EB350-4-36",
-    "x": 348,
-    "y": 254
+    "requiredType": "EB300-4-30",
+    "x": 441,
+    "y": 268
   },
   {
     "id": "p013",
-    "requiredType": "EB350-4-36",
-    "x": 432,
-    "y": 248
+    "requiredType": "EB300-4-30",
+    "x": 557,
+    "y": 268
   },
   {
     "id": "p014",
-    "requiredType": "EB350-4-36",
-    "x": 508,
-    "y": 252
+    "requiredType": "EB300-4-30",
+    "x": 136,
+    "y": 326
   },
   {
     "id": "p015",
-    "requiredType": "EB350-4-36",
-    "x": 186,
-    "y": 91
+    "requiredType": "EB300-4-30",
+    "x": 253,
+    "y": 326
+  },
+  {
+    "id": "p016",
+    "requiredType": "EB300-4-30",
+    "x": 444,
+    "y": 337
+  },
+  {
+    "id": "p017",
+    "requiredType": "EB300-4-30",
+    "x": 559,
+    "y": 332
+  },
+  {
+    "id": "p018",
+    "requiredType": "EB300-4-30",
+    "x": 133,
+    "y": 457
+  },
+  {
+    "id": "p019",
+    "requiredType": "EB300-4-30",
+    "x": 252,
+    "y": 458
+  },
+  {
+    "id": "p020",
+    "requiredType": "EB300-4-30",
+    "x": 439,
+    "y": 456
   },
   {
     "id": "p021",
-    "requiredType": "EB350-4-30",
-    "x": 347,
-    "y": 89
+    "requiredType": "EB300-4-30",
+    "x": 557,
+    "y": 457
   },
   {
     "id": "p022",
-    "requiredType": "EB350-4-30",
-    "x": 508,
-    "y": 89
+    "requiredType": "EM300-4-24",
+    "x": 349,
+    "y": 270
+  },
+  {
+    "id": "p023",
+    "requiredType": "EM300-4-24",
+    "x": 347,
+    "y": 329
   }
 ]
