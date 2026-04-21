@@ -728,6 +728,23 @@
       return "planner_positions_" + currentSite.siteId + "_" + currentDrawing.drawingId;
     }
 
+    function getSharedKeyplanStorageKey() {
+      return "planner_keyplan_" + currentSite.siteId;
+    }
+
+    function saveSharedKeyplan(imageDataUrl, crop) {
+      const payload = {
+        imageDataUrl: String(imageDataUrl || ""),
+        crop: {
+          x: Math.round(Number(crop && crop.x || 0)),
+          y: Math.round(Number(crop && crop.y || 0)),
+          w: Math.round(Number(crop && (crop.w != null ? crop.w : crop.width) || 0)),
+          h: Math.round(Number(crop && (crop.h != null ? crop.h : crop.height) || 0))
+        }
+      };
+      localStorage.setItem(getSharedKeyplanStorageKey(), JSON.stringify(payload));
+    }
+
     function getCandidateRegionStorageKey() {
       return "planner_candidate_region_" + currentSite.siteId;
     }
@@ -1369,7 +1386,9 @@
         cutCanvas.height
       );
 
-      await setPlanImageSource(cutCanvas.toDataURL("image/png"));
+      const imageDataUrl = cutCanvas.toDataURL("image/png");
+      await setPlanImageSource(imageDataUrl);
+      saveSharedKeyplan(imageDataUrl, sourceSelectionRect);
       syncCandidateRegionInputs({
         x: 0,
         y: 0,
