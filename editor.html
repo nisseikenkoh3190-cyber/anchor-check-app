@@ -144,6 +144,7 @@
       padding: 12px;
     }
     .source-canvas-wrap {
+      position: relative;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: #f8fafc;
@@ -154,6 +155,14 @@
       display: block;
       max-width: 100%;
       height: auto;
+      cursor: crosshair;
+    }
+    .source-selection-overlay {
+      position: absolute;
+      border: 2px dashed rgba(37, 99, 235, 0.9);
+      background: rgba(37, 99, 235, 0.14);
+      pointer-events: none;
+      display: none;
     }
     .inline-fields {
       display: grid;
@@ -427,12 +436,16 @@
             <span class="label">元図面画像</span>
             <input class="input" id="sourceImageInput" type="file" accept="image/*" />
           </label>
+          <div class="btn-row">
+            <button class="btn" id="cutKeyplanBtn" type="button">keyplanとして切り出し</button>
+          </div>
           <div class="status" id="sourceCanvasStatus">まだ画像は読み込まれていません。</div>
         </div>
         <div class="canvas-panel">
           <div class="label">sourceCanvas</div>
           <div class="source-canvas-wrap" style="margin-top:8px;">
             <canvas id="sourceCanvas" class="source-canvas"></canvas>
+            <div id="sourceSelectionOverlay" class="source-selection-overlay"></div>
           </div>
         </div>
       </div>
@@ -600,6 +613,8 @@
     let dragState = null;
     let lastDragEndedAt = 0;
     let plannerDataSource = "unknown";
+    let sourceSelectionState = null;
+    let sourceSelectionRect = null;
 
     const siteSelector = document.getElementById("siteSelector");
     const drawingSelector = document.getElementById("drawingSelector");
@@ -619,7 +634,9 @@
     const positionsPathText = document.getElementById("positionsPathText");
     const dataSourceChip = document.getElementById("dataSourceChip");
     const sourceImageInput = document.getElementById("sourceImageInput");
+    const cutKeyplanBtn = document.getElementById("cutKeyplanBtn");
     const sourceCanvas = document.getElementById("sourceCanvas");
+    const sourceSelectionOverlay = document.getElementById("sourceSelectionOverlay");
     const sourceCanvasStatus = document.getElementById("sourceCanvasStatus");
     const sourceContext = sourceCanvas.getContext("2d");
     const candidateRegionXInput = document.getElementById("candidateRegionXInput");
@@ -1261,6 +1278,8 @@
       sourceCanvas.width = 0;
       sourceCanvas.height = 0;
       sourceContext.clearRect(0, 0, 1, 1);
+      sourceSelectionRect = null;
+      renderSourceSelectionOverlay();
     }
 
     function drawImageToSourceCanvas(image) {
@@ -1268,7 +1287,97 @@
       sourceCanvas.height = image.naturalHeight || image.height;
       sourceContext.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
       sourceContext.drawImage(image, 0, 0, sourceCanvas.width, sourceCanvas.height);
+      sourceSelectionRect = null;
+      renderSourceSelectionOverlay();
       setSourceCanvasStatus("元図面を sourceCanvas に描画しました。 " + sourceCanvas.width + " x " + sourceCanvas.height);
+    }
+
+    function getSourceCanvasCoordinates(clientX, clientY) {
+      const rect = sourceCanvas.getBoundingClientRect();
+      const scaleX = rect.width ? sourceCanvas.width / rect.width : 1;
+      const scaleY = rect.height ? sourceCanvas.height / rect.height : 1;
+      return {
+        x: Math.max(0, Math.min(sourceCanvas.width, Math.round((clientX - rect.left) * scaleX))),
+        y: Math.max(0, Math.min(sourceCanvas.height, Math.round((clientY - rect.top) * scaleY)))
+      };
+    }
+
+    function normalizeSourceSelectionRect(startX, startY, endX, endY) {
+      const x = Math.max(0, Math.min(startX, endX));
+      const y = Math.max(0, Math.min(startY, endY));
+      const width = Math.max(1, Math.abs(endX - startX));
+      const height = Math.max(1, Math.abs(endY - startY));
+      return { x: x, y: y, width: width, height: height };
+    }
+
+    function renderSourceSelectionOverlay() {
+      if (!sourceSelectionRect || !sourceCanvas.width || !sourceCanvas.height) {
+        sourceSelectionOverlay.style.display = "none";
+        return;
+      }
+
+      const displayWidth = sourceCanvas.clientWidth || sourceCanvas.width;
+      const displayHeight = sourceCanvas.clientHeight || sourceCanvas.height;
+      const scaleX = sourceCanvas.width ? displayWidth / sourceCanvas.width : 1;
+      const scaleY = sourceCanvas.height ? displayHeight / sourceCanvas.height : 1;
+
+      sourceSelectionOverlay.style.display = "block";
+      sourceSelectionOverlay.style.left = (sourceSelectionRect.x * scaleX) + "px";
+      sourceSelectionOverlay.style.top = (sourceSelectionRect.y * scaleY) + "px";
+      sourceSelectionOverlay.style.width = (sourceSelectionRect.width * scaleX) + "px";
+      sourceSelectionOverlay.style.height = (sourceSelectionRect.height * scaleY) + "px";
+    }
+
+    function setPlanImageSource(src) {
+      return new Promise(function (resolve, reject) {
+        planImage.onload = function () {
+          planStage.style.width = planImage.naturalWidth + "px";
+          planStage.style.height = planImage.naturalHeight + "px";
+          renderCandidateRegionOverlay();
+          resolve();
+        };
+        planImage.onerror = function () {
+          reject(new Error("Failed to load keyplan image."));
+        };
+        planImage.src = src;
+      });
+    }
+
+    async function cutSelectedSourceRegionToPlanImage() {
+      if (!sourceCanvas.width || !sourceCanvas.height) {
+        alert("先に元図面画像を読み込んでください。");
+        return;
+      }
+      if (!sourceSelectionRect) {
+        alert("sourceCanvas 上で keyplan 範囲をドラッグ選択してください。");
+        return;
+      }
+
+      const cutCanvas = document.createElement("canvas");
+      cutCanvas.width = sourceSelectionRect.width;
+      cutCanvas.height = sourceSelectionRect.height;
+      const cutContext = cutCanvas.getContext("2d");
+      cutContext.drawImage(
+        sourceCanvas,
+        sourceSelectionRect.x,
+        sourceSelectionRect.y,
+        sourceSelectionRect.width,
+        sourceSelectionRect.height,
+        0,
+        0,
+        cutCanvas.width,
+        cutCanvas.height
+      );
+
+      await setPlanImageSource(cutCanvas.toDataURL("image/png"));
+      syncCandidateRegionInputs({
+        x: 0,
+        y: 0,
+        width: cutCanvas.width,
+        height: cutCanvas.height
+      });
+      renderCandidateRegionOverlay();
+      setSaveStatus("sourceCanvas から keyplan を切り出しました。点編集を続けられます。");
     }
 
     function loadSourceImageFile(file) {
@@ -2297,17 +2406,7 @@
     }
 
     async function loadPlanImage() {
-      return new Promise(function (resolve, reject) {
-        planImage.onload = function () {
-          planStage.style.width = planImage.naturalWidth + "px";
-          planStage.style.height = planImage.naturalHeight + "px";
-          resolve();
-        };
-        planImage.onerror = function () {
-          reject(new Error("Failed to load keyplan image."));
-        };
-        planImage.src = currentDrawing.keyPlanImage;
-      });
+      return setPlanImageSource(currentDrawing.keyPlanImage);
     }
 
     async function refreshPlanner() {
@@ -2374,6 +2473,12 @@
     sourceImageInput.addEventListener("change", function () {
       loadSourceImageFile(sourceImageInput.files && sourceImageInput.files[0]);
     });
+    cutKeyplanBtn.addEventListener("click", function () {
+      cutSelectedSourceRegionToPlanImage().catch(function (error) {
+        console.error(error);
+        alert("keyplan の切り出しに失敗しました。");
+      });
+    });
     candidateRegionDefaultBtn.addEventListener("click", function () {
       if (!planImage.naturalWidth || !planImage.naturalHeight) return;
       syncCandidateRegionInputs(getDefaultCandidateRegion());
@@ -2426,6 +2531,45 @@
 
     pointLayer.addEventListener("pointerup", finishDrag);
     pointLayer.addEventListener("pointercancel", finishDrag);
+
+    sourceCanvas.addEventListener("pointerdown", function (event) {
+      if (!sourceCanvas.width || !sourceCanvas.height) return;
+      event.preventDefault();
+      const coords = getSourceCanvasCoordinates(event.clientX, event.clientY);
+      sourceSelectionState = {
+        startX: coords.x,
+        startY: coords.y
+      };
+      sourceSelectionRect = {
+        x: coords.x,
+        y: coords.y,
+        width: 1,
+        height: 1
+      };
+      renderSourceSelectionOverlay();
+      sourceCanvas.setPointerCapture(event.pointerId);
+    });
+
+    sourceCanvas.addEventListener("pointermove", function (event) {
+      if (!sourceSelectionState) return;
+      const coords = getSourceCanvasCoordinates(event.clientX, event.clientY);
+      sourceSelectionRect = normalizeSourceSelectionRect(
+        sourceSelectionState.startX,
+        sourceSelectionState.startY,
+        coords.x,
+        coords.y
+      );
+      renderSourceSelectionOverlay();
+    });
+
+    function finishSourceSelection() {
+      if (!sourceSelectionState) return;
+      sourceSelectionState = null;
+      renderSourceSelectionOverlay();
+    }
+
+    sourceCanvas.addEventListener("pointerup", finishSourceSelection);
+    sourceCanvas.addEventListener("pointercancel", finishSourceSelection);
 
     planStage.addEventListener("click", function (event) {
       if (previewMode === "integrated") return;
