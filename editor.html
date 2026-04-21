@@ -1130,6 +1130,46 @@
       renderPlanner();
     }
 
+    function switchLayer(layerId, message) {
+      const state = ensureEditorState();
+      const nextLayer = state.layers.find(function (layer) {
+        return layer.layerId === layerId;
+      });
+      if (!nextLayer) return;
+
+      if (selectedLayerId) {
+        syncCurrentLayerFromPlannerPoints();
+      }
+
+      selectedLayerId = nextLayer.layerId;
+      syncPlannerPointsFromCurrentLayer();
+      selectedPointId = plannerPoints[0] ? plannerPoints[0].id : null;
+      renderPlanner();
+      if (message) {
+        setSaveStatus(message);
+      }
+    }
+
+    function switchToLayer(layerId, message) {
+      switchLayer(layerId, message);
+    }
+
+    function handleLayerListClick(event) {
+      const eventTarget = event.target instanceof Element
+        ? event.target
+        : event.target && event.target.parentElement;
+      if (!eventTarget) return;
+
+      const layerCard = eventTarget.closest("[data-layer-id]");
+      if (!layerCard || !layerList.contains(layerCard)) return;
+
+      const layerId = String(layerCard.dataset.layerId || "").trim();
+      if (!layerId || layerId === selectedLayerId) return;
+
+      event.preventDefault();
+      switchLayer(layerId, "レイヤーを切り替えました。");
+    }
+
     function getSelectedPoint() {
       return plannerPoints.find(function (point) { return point.id === selectedPointId; }) || null;
     }
@@ -2418,11 +2458,7 @@
       updateCurrentLayerMetaField("setCount", layerSetCountInput.value);
     });
 
-    layerList.addEventListener("click", function (event) {
-      const target = event.target.closest("[data-layer-id]");
-      if (!target || target.dataset.layerId === selectedLayerId) return;
-      switchToLayer(target.dataset.layerId, "レイヤーを切り替えました。");
-    });
+    layerList.addEventListener("click", handleLayerListClick);
 
     currentLayerModeBtn.addEventListener("click", function () {
       previewMode = "current";
