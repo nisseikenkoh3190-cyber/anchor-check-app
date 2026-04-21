@@ -412,6 +412,7 @@
         <button class="btn" id="goFieldBtn" type="button">現場画面へ</button>
       </div>
       <div class="btn-row">
+        <button class="btn" id="keyplanPngBtn" type="button">keyplan PNG出力</button>
         <button class="btn primary" id="jsonBtn" type="button">JSON出力</button>
         <button class="btn" id="resetPositionsBtn" type="button">仮保存クリア / 再読込</button>
       </div>
@@ -419,6 +420,10 @@
         <div>
           <div class="label">保存対象パス</div>
           <div class="path-box" id="positionsPathText">-</div>
+        </div>
+        <div>
+          <div class="label">keyplan 保存対象パス</div>
+          <div class="path-box" id="keyplanPathText">-</div>
         </div>
         <div>
           <div class="label">現在の読込元</div>
@@ -620,6 +625,7 @@
     const drawingSelector = document.getElementById("drawingSelector");
     const backAdminBtn = document.getElementById("backAdminBtn");
     const goFieldBtn = document.getElementById("goFieldBtn");
+    const keyplanPngBtn = document.getElementById("keyplanPngBtn");
     const jsonBtn = document.getElementById("jsonBtn");
     const resetPositionsBtn = document.getElementById("resetPositionsBtn");
     const planStage = document.getElementById("planStage");
@@ -632,6 +638,7 @@
     const currentLayerModeBtn = document.getElementById("currentLayerModeBtn");
     const integratedPreviewModeBtn = document.getElementById("integratedPreviewModeBtn");
     const positionsPathText = document.getElementById("positionsPathText");
+    const keyplanPathText = document.getElementById("keyplanPathText");
     const dataSourceChip = document.getElementById("dataSourceChip");
     const sourceImageInput = document.getElementById("sourceImageInput");
     const cutKeyplanBtn = document.getElementById("cutKeyplanBtn");
@@ -755,6 +762,14 @@
         return parts[parts.length - 1] || "positions.json";
       }
       return "positions.json";
+    }
+
+    function getKeyplanDownloadedFileName() {
+      if (currentDrawing.keyPlanImage) {
+        const parts = currentDrawing.keyPlanImage.split("/");
+        return parts[parts.length - 1] || "keyplan.png";
+      }
+      return "keyplan.png";
     }
 
     function populateSiteSelector() {
@@ -2265,6 +2280,7 @@
 
     function renderPlanner() {
       positionsPathText.textContent = currentDrawing.positionsFile || "positions.json";
+      keyplanPathText.textContent = currentDrawing.keyPlanImage || "keyplan.png";
       renderCandidateRegionOverlay();
       renderLayerList();
       renderPointLayer();
@@ -2424,6 +2440,27 @@
       setSaveStatus("JSON を出力しました。対象ファイルへ差し替えてください。");
     }
 
+    function downloadKeyplanPng() {
+      if (!planImage.naturalWidth || !planImage.naturalHeight || !planImage.src) {
+        alert("出力する keyplan がまだありません。");
+        return;
+      }
+
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = planImage.naturalWidth;
+      exportCanvas.height = planImage.naturalHeight;
+      const exportContext = exportCanvas.getContext("2d");
+      exportContext.drawImage(planImage, 0, 0, exportCanvas.width, exportCanvas.height);
+
+      const anchor = document.createElement("a");
+      anchor.href = exportCanvas.toDataURL("image/png");
+      anchor.download = getKeyplanDownloadedFileName();
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setSaveStatus("keyplan PNG を出力しました。positions.json と同じ drawing に配置してください。");
+    }
+
     async function loadPlanImage() {
       return setPlanImageSource(currentDrawing.keyPlanImage);
     }
@@ -2481,6 +2518,7 @@
 
     backAdminBtn.addEventListener("click", goToAdminScreen);
     goFieldBtn.addEventListener("click", goToFieldScreen);
+    keyplanPngBtn.addEventListener("click", downloadKeyplanPng);
     jsonBtn.addEventListener("click", downloadJson);
     resetPositionsBtn.addEventListener("click", async function () {
       if (!confirm("仮保存をクリアして positions.json から再読込しますか？")) return;

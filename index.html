@@ -612,7 +612,7 @@
       adminLink.href = `admin.html?SITE=${encodeURIComponent(currentSite.siteId)}&DRAWING=${encodeURIComponent(currentDrawingId)}`;
       resetViewTransform();
       resetGestureTracking();
-      await ensurePlanImageLoaded(getSharedKeyplanImageSrc() || currentDrawing.keyPlanImage);
+      await ensurePlanImageLoaded(currentDrawing.keyPlanImage);
       const positions = await loadPositionsForDrawing(currentDrawing);
       if (token !== drawingLoadToken) return;
       currentDrawing.positions = positions;
