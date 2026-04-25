@@ -430,6 +430,25 @@
           <div class="status-chip" id="dataSourceChip">確認中</div>
         </div>
       </div>
+      <div class="inline-fields" style="margin-top:12px;">
+        <label class="field">
+          <span class="label">siteId</span>
+          <input class="input" id="masterSiteIdInput" type="text" placeholder="site-001" />
+        </label>
+        <label class="field">
+          <span class="label">title (= siteName)</span>
+          <input class="input" id="masterTitleInput" type="text" placeholder="現場名" />
+        </label>
+        <label class="field">
+          <span class="label">drawingId</span>
+          <input class="input" id="masterDrawingIdInput" type="text" placeholder="kp01" />
+        </label>
+        <label class="field">
+          <span class="label">drawingName</span>
+          <input class="input" id="masterDrawingNameInput" type="text" placeholder="共通キープラン01" />
+        </label>
+      </div>
+      <div class="muted" style="margin-top:10px;">editor の正式出力メタ情報です。`keyplan.png` と `positions.json` はこの siteId / drawingId の組み合わせで揃えて運用します。</div>
     </div>
 
     <div class="card">
@@ -598,11 +617,20 @@
             <h3>JSONプレビュー</h3>
             <textarea id="jsonPreview" class="textarea" spellcheck="false" readonly></textarea>
           </div>
+
+          <div>
+            <h3>sites 追加用 JSON</h3>
+            <div class="btn-row">
+              <button class="btn" id="sitesConfigBtn" type="button">sites 追加JSON出力</button>
+            </div>
+            <textarea id="sitesConfigPreview" class="textarea" spellcheck="false" readonly></textarea>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="./site-config.js"></script>
   <script>
     const SITE_DATA_URL = "./sites.json";
     const DEFAULT_SPEC = "EB350-4-30";
@@ -640,6 +668,10 @@
     const positionsPathText = document.getElementById("positionsPathText");
     const keyplanPathText = document.getElementById("keyplanPathText");
     const dataSourceChip = document.getElementById("dataSourceChip");
+    const masterSiteIdInput = document.getElementById("masterSiteIdInput");
+    const masterTitleInput = document.getElementById("masterTitleInput");
+    const masterDrawingIdInput = document.getElementById("masterDrawingIdInput");
+    const masterDrawingNameInput = document.getElementById("masterDrawingNameInput");
     const sourceImageInput = document.getElementById("sourceImageInput");
     const cutKeyplanBtn = document.getElementById("cutKeyplanBtn");
     const sourceCanvas = document.getElementById("sourceCanvas");
@@ -660,6 +692,8 @@
     const candidateStatus = document.getElementById("candidateStatus");
     const candidateDebugText = document.getElementById("candidateDebugText");
     const jsonPreview = document.getElementById("jsonPreview");
+    const sitesConfigBtn = document.getElementById("sitesConfigBtn");
+    const sitesConfigPreview = document.getElementById("sitesConfigPreview");
     const editorEmpty = document.getElementById("editorEmpty");
     const pointEditor = document.getElementById("pointEditor");
     const pointIdInput = document.getElementById("pointIdInput");
@@ -679,45 +713,6 @@
     const candidateCanvas = document.createElement("canvas");
     const candidateContext = candidateCanvas.getContext("2d", { willReadFrequently: true });
 
-    function normalizeDrawingRecord(drawing) {
-      const drawingId = String(drawing && drawing.drawingId || "").trim();
-      const drawingName = String(drawing && drawing.drawingName || "").trim();
-      const keyPlanImage = String(drawing && (drawing.keyPlanImage || drawing.image) || "").trim();
-      const positionsFile = String(drawing && drawing.positionsFile || "").trim();
-      return { drawingId, drawingName, keyPlanImage, positionsFile };
-    }
-
-    function normalizeSiteRecord(site) {
-      const title = String(site && (site.title || site.siteId) || "").trim();
-      const siteId = String(site && (site.siteId || title) || "").trim();
-      const siteName = String(site && site.siteName || "").trim();
-      const drawings = Array.isArray(site && site.drawings)
-        ? site.drawings
-            .map(normalizeDrawingRecord)
-            .filter(function (drawing) {
-              return drawing.drawingId && drawing.drawingName && drawing.keyPlanImage;
-            })
-        : [];
-      const defaultDrawingId = String(site && (site.defaultDrawingId || drawings[0] && drawings[0].drawingId) || "").trim();
-      return { siteId, title, siteName, defaultDrawingId, drawings };
-    }
-
-    async function loadSitesData() {
-      const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Failed to load " + SITE_DATA_URL + ": " + response.status);
-      }
-      const data = await response.json();
-      const rawSites = Array.isArray(data && data.sites) ? data.sites : [];
-      const normalized = rawSites
-        .map(normalizeSiteRecord)
-        .filter(function (site) { return site.siteId && site.drawings.length; });
-      if (!normalized.length) {
-        throw new Error(SITE_DATA_URL + " does not contain any valid site records.");
-      }
-      return normalized;
-    }
-
     function sanitizeValue(value) {
       return String(value == null ? "" : value).replace(/[\r\n]+/g, " ").trim();
     }
@@ -732,11 +727,11 @@
     }
 
     function getPlannerStorageKey() {
-      return "planner_positions_" + currentSite.siteId + "_" + currentDrawing.drawingId;
+      return SiteConfig.getPlannerStorageKey(currentSite.siteId, currentDrawing.drawingId);
     }
 
     function getSharedKeyplanStorageKey() {
-      return "planner_keyplan_" + currentSite.siteId;
+      return SiteConfig.getSharedKeyplanStorageKey(currentSite.siteId, currentDrawing.drawingId);
     }
 
     function saveSharedKeyplan(imageDataUrl, crop) {
@@ -753,22 +748,73 @@
     }
 
     function getCandidateRegionStorageKey() {
-      return "planner_candidate_region_" + currentSite.siteId;
+      return SiteConfig.getCandidateRegionStorageKey(currentSite.siteId, currentDrawing.drawingId);
+    }
+
+    function getMasterConfigMeta() {
+      return {
+        siteId: sanitizeValue(masterSiteIdInput.value),
+        title: sanitizeValue(masterTitleInput.value),
+        drawingId: sanitizeValue(masterDrawingIdInput.value),
+        drawingName: sanitizeValue(masterDrawingNameInput.value)
+      };
+    }
+
+    function getMasterConfigPaths() {
+      const meta = getMasterConfigMeta();
+      if (!meta.siteId || !meta.drawingId) {
+        return {
+          keyPlanImage: "assets/<siteId>/<drawingId>/keyplan.png",
+          positionsFile: "assets/<siteId>/<drawingId>/positions.json"
+        };
+      }
+      return SiteConfig.buildDrawingPaths(meta.siteId, meta.drawingId);
+    }
+
+    function syncMasterConfigInputsFromSelection() {
+      masterSiteIdInput.value = currentSite && currentSite.siteId || "";
+      masterTitleInput.value = currentSite && (currentSite.title || currentSite.siteName) || "";
+      masterDrawingIdInput.value = currentDrawing && currentDrawing.drawingId || "";
+      masterDrawingNameInput.value = currentDrawing && currentDrawing.drawingName || "";
+    }
+
+    function validateMasterConfigMeta(options) {
+      const meta = getMasterConfigMeta();
+      const errors = [];
+      const strictAppend = Boolean(options && options.strictAppend);
+      const existingSite = SiteConfig.findSiteById(sites, meta.siteId);
+
+      if (!/^[A-Za-z0-9-]+$/.test(meta.siteId)) {
+        errors.push("siteId は英数字とハイフンのみで入力してください。");
+      }
+      if (!meta.title) {
+        errors.push("title を入力してください。");
+      }
+      if (!/^[A-Za-z0-9-]+$/.test(meta.drawingId)) {
+        errors.push("drawingId は英数字とハイフンのみで入力してください。");
+      }
+      if (!meta.drawingName) {
+        errors.push("drawingName を入力してください。");
+      }
+      if (strictAppend && existingSite && existingSite.drawings.some(function (drawing) { return drawing.drawingId === meta.drawingId; })) {
+        errors.push("同じ siteId 内に同じ drawingId がすでに存在します。");
+      }
+      if (strictAppend && existingSite && meta.title && meta.title !== (existingSite.title || existingSite.siteName)) {
+        errors.push("既存 siteId に追加する場合、title は既存の siteName と合わせてください。");
+      }
+
+      return errors;
+    }
+
+    function buildSitesConfigPayload() {
+      return SiteConfig.buildAppendConfig(sites, getMasterConfigMeta());
     }
 
     function getDownloadedFileName() {
-      if (currentDrawing.positionsFile) {
-        const parts = currentDrawing.positionsFile.split("/");
-        return parts[parts.length - 1] || "positions.json";
-      }
       return "positions.json";
     }
 
     function getKeyplanDownloadedFileName() {
-      if (currentDrawing.keyPlanImage) {
-        const parts = currentDrawing.keyPlanImage.split("/");
-        return parts[parts.length - 1] || "keyplan.png";
-      }
       return "keyplan.png";
     }
 
@@ -791,7 +837,7 @@
     }
 
     function setCurrentSite(siteId) {
-      currentSite = sites.find(function (site) { return site.siteId === siteId; }) || sites[0];
+      currentSite = SiteConfig.findSiteById(sites, siteId) || sites[0];
     }
 
     function setCurrentDrawing(drawingId) {
@@ -1229,6 +1275,7 @@
 
     function updateJsonPreview() {
       jsonPreview.value = JSON.stringify(buildExportData(), null, 2);
+      sitesConfigPreview.value = JSON.stringify(buildSitesConfigPayload().payload, null, 2);
     }
 
     function setSaveStatus(message) {
@@ -2279,8 +2326,9 @@
     }
 
     function renderPlanner() {
-      positionsPathText.textContent = currentDrawing.positionsFile || "positions.json";
-      keyplanPathText.textContent = currentDrawing.keyPlanImage || "keyplan.png";
+      const outputPaths = getMasterConfigPaths();
+      positionsPathText.textContent = outputPaths.positionsFile;
+      keyplanPathText.textContent = outputPaths.keyPlanImage;
       renderCandidateRegionOverlay();
       renderLayerList();
       renderPointLayer();
@@ -2422,6 +2470,12 @@
     }
 
     function downloadJson() {
+      const masterConfigErrors = validateMasterConfigMeta();
+      if (masterConfigErrors.length) {
+        alert(masterConfigErrors.join("\n"));
+        return;
+      }
+
       const errors = validateBeforeExport();
       if (errors.length) {
         alert("JSON出力を中止しました。\n" + errors.join("\n"));
@@ -2438,6 +2492,26 @@
       anchor.remove();
       URL.revokeObjectURL(url);
       setSaveStatus("JSON を出力しました。対象ファイルへ差し替えてください。");
+    }
+
+    function downloadSitesConfigJson() {
+      const errors = validateMasterConfigMeta({ strictAppend: true });
+      if (errors.length) {
+        alert(errors.join("\n"));
+        return;
+      }
+
+      const meta = getMasterConfigMeta();
+      const blob = new Blob([JSON.stringify(buildSitesConfigPayload().payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = meta.siteId + "_" + meta.drawingId + "_sites-config.json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setSaveStatus("sites.json 追加用の設定 JSON を出力しました。");
     }
 
     function downloadKeyplanPng() {
@@ -2475,6 +2549,7 @@
     async function handleSiteChange() {
       setCurrentSite(siteSelector.value);
       setCurrentDrawing(currentSite.defaultDrawingId);
+      syncMasterConfigInputsFromSelection();
       populateDrawingSelector();
       syncQuery();
       await refreshPlanner();
@@ -2482,20 +2557,19 @@
 
     async function handleDrawingChange() {
       setCurrentDrawing(drawingSelector.value);
+      syncMasterConfigInputsFromSelection();
       syncQuery();
       await refreshPlanner();
     }
 
     async function initializeEditor() {
-      sites = await loadSitesData();
+      sites = await SiteConfig.loadSitesData(SITE_DATA_URL);
 
       const params = new URLSearchParams(location.search);
-      const requestedSiteId = params.get("SITE") || params.get("TITLE");
-      setCurrentSite(sites.find(function (site) { return site.siteId === requestedSiteId; }) ? requestedSiteId : sites[0].siteId);
+      setCurrentSite(SiteConfig.resolveRequestedSiteId(sites, params));
+      setCurrentDrawing(SiteConfig.resolveRequestedDrawingId(currentSite, params));
 
-      const requestedDrawingId = params.get("DRAWING");
-      setCurrentDrawing(requestedDrawingId || currentSite.defaultDrawingId);
-
+      syncMasterConfigInputsFromSelection();
       populateSiteSelector();
       populateDrawingSelector();
       syncQuery();
@@ -2520,12 +2594,18 @@
     goFieldBtn.addEventListener("click", goToFieldScreen);
     keyplanPngBtn.addEventListener("click", downloadKeyplanPng);
     jsonBtn.addEventListener("click", downloadJson);
+    sitesConfigBtn.addEventListener("click", downloadSitesConfigJson);
     resetPositionsBtn.addEventListener("click", async function () {
       if (!confirm("仮保存をクリアして positions.json から再読込しますか？")) return;
       localStorage.removeItem(getPlannerStorageKey());
       plannerDataSource = "unknown";
       await loadPlannerPoints();
       setSaveStatus("仮保存をクリアし、positions.json から再読込しました。");
+    });
+    [masterSiteIdInput, masterTitleInput, masterDrawingIdInput, masterDrawingNameInput].forEach(function (input) {
+      input.addEventListener("input", function () {
+        renderPlanner();
+      });
     });
     sourceImageInput.addEventListener("change", function () {
       loadSourceImageFile(sourceImageInput.files && sourceImageInput.files[0]);

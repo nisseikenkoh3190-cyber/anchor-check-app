@@ -140,6 +140,7 @@
     </div>
   </div>
 
+  <script src="./site-config.js"></script>
   <script>
     const SITE_DATA_URL = "./sites.json";
 
@@ -151,45 +152,6 @@
     const drawingSelector = document.getElementById("drawingSelector");
     const goFieldBtn = document.getElementById("goFieldBtn");
     const goEditorBtn = document.getElementById("goEditorBtn");
-
-    function normalizeDrawingRecord(drawing) {
-      const drawingId = String(drawing && drawing.drawingId || "").trim();
-      const drawingName = String(drawing && drawing.drawingName || "").trim();
-      const keyPlanImage = String(drawing && (drawing.keyPlanImage || drawing.image) || "").trim();
-      const positionsFile = String(drawing && drawing.positionsFile || "").trim();
-      return { drawingId, drawingName, keyPlanImage, positionsFile };
-    }
-
-    function normalizeSiteRecord(site) {
-      const title = String(site && (site.title || site.siteId) || "").trim();
-      const siteId = String(site && (site.siteId || title) || "").trim();
-      const siteName = String(site && site.siteName || "").trim();
-      const drawings = Array.isArray(site && site.drawings)
-        ? site.drawings
-            .map(normalizeDrawingRecord)
-            .filter(function (drawing) {
-              return drawing.drawingId && drawing.drawingName && drawing.keyPlanImage;
-            })
-        : [];
-      const defaultDrawingId = String(site && (site.defaultDrawingId || drawings[0] && drawings[0].drawingId) || "").trim();
-      return { siteId, title, siteName, defaultDrawingId, drawings };
-    }
-
-    async function loadSitesData() {
-      const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Failed to load " + SITE_DATA_URL + ": " + response.status);
-      }
-      const data = await response.json();
-      const rawSites = Array.isArray(data && data.sites) ? data.sites : [];
-      const normalized = rawSites
-        .map(normalizeSiteRecord)
-        .filter(function (site) { return site.siteId && site.drawings.length; });
-      if (!normalized.length) {
-        throw new Error(SITE_DATA_URL + " does not contain any valid site records.");
-      }
-      return normalized;
-    }
 
     function sanitizeValue(value) {
       return String(value == null ? "" : value).replace(/[\r\n]+/g, " ").trim();
@@ -205,7 +167,7 @@
     }
 
     function getHistoryKey() {
-      return "history_" + currentSite.siteId + "_" + currentDrawing.drawingId;
+      return SiteConfig.getHistoryStorageKey(currentSite.siteId, currentDrawing.drawingId);
     }
 
     function getLegacyHistoryKeys() {
@@ -249,7 +211,7 @@
     }
 
     function setCurrentSite(siteId) {
-      currentSite = sites.find(function (site) { return site.siteId === siteId; }) || sites[0];
+      currentSite = SiteConfig.findSiteById(sites, siteId) || sites[0];
     }
 
     function setCurrentDrawing(drawingId) {
@@ -356,14 +318,11 @@
     }
 
     async function initializeAdmin() {
-      sites = await loadSitesData();
+      sites = await SiteConfig.loadSitesData(SITE_DATA_URL);
 
       const params = new URLSearchParams(location.search);
-      const requestedSiteId = params.get("SITE") || params.get("TITLE");
-      setCurrentSite(sites.find(function (site) { return site.siteId === requestedSiteId; }) ? requestedSiteId : sites[0].siteId);
-
-      const requestedDrawingId = params.get("DRAWING");
-      setCurrentDrawing(requestedDrawingId || currentSite.defaultDrawingId);
+      setCurrentSite(SiteConfig.resolveRequestedSiteId(sites, params));
+      setCurrentDrawing(SiteConfig.resolveRequestedDrawingId(currentSite, params));
 
       populateSiteSelector();
       populateDrawingSelector();

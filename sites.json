@@ -2,14 +2,15 @@
   "sites": [
     {
       "siteId": "site_001",
-      "siteName": "仮設確認現場",
+      "title": "\u73fe\u5834\u540d",
+      "siteName": "\u73fe\u5834\u540d",
+      "defaultDrawingId": "kp01",
       "drawings": [
         {
           "drawingId": "kp01",
-          "drawingName": "仮キープラン01",
+          "drawingName": "\u5171\u901a\u30ad\u30fc\u30d7\u30e9\u30f301",
           "keyPlanImage": "assets/site_001/kp01/keyplan.png",
-          "positionsFile": "assets/site_001/kp01/positions.json",
-          "sourceData": []
+          "positionsFile": "assets/site_001/kp01/positions.json"
         }
       ]
     }

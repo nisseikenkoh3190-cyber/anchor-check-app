@@ -282,10 +282,10 @@
 
   <canvas id="qrCanvas" style="display:none;"></canvas>
 
+  <script src="./site-config.js"></script>
   <script>
     const SITE_DATA_URL = "./sites.json";
-    let sites = {};
-    let currentTitle = "";
+    let sites = [];
     let currentSite = null;
     let currentDrawingId = "";
     let currentDrawing = null;
@@ -359,83 +359,10 @@
       return { id, displayName, gridX, gridY, label, requiredType, x, y };
     }
 
-    function normalizeDrawingRecord(drawing){
-      const drawingId = String(drawing?.drawingId || "").trim();
-      const drawingName = String(drawing?.drawingName || "").trim();
-      const keyPlanImage = String(drawing?.keyPlanImage || drawing?.image || "").trim();
-      const positionsFile = String(drawing?.positionsFile || "").trim();
-      const sourceData = Array.isArray(drawing?.sourceData) ? drawing.sourceData : [];
-
-      return { drawingId, drawingName, keyPlanImage, positionsFile, sourceData, positions: [] };
-    }
-
-    function normalizeSiteRecord(site){
-      const siteId = String(site?.siteId || site?.title || "").trim();
-      const drawings = Array.isArray(site?.drawings)
-        ? site.drawings.map(normalizeDrawingRecord).filter(drawing => drawing.drawingId && drawing.drawingName && drawing.keyPlanImage && drawing.positionsFile)
-        : [];
-      const defaultDrawingId = String(site?.defaultDrawingId || drawings[0]?.drawingId || "").trim();
-
-      return {
-        siteId,
-        siteName: String(site?.siteName || "").trim(),
-        defaultDrawingId,
-        drawings
-      };
-    }
-
-    async function loadSitesData(){
-      const response = await fetch(SITE_DATA_URL, { cache: "no-store" });
-      if (!response.ok){
-        console.error("Failed to fetch sites.json", { url: response.url || SITE_DATA_URL, status: response.status });
-        throw new Error(`Failed to load ${SITE_DATA_URL}: ${response.status}`);
-      }
-      console.log("STEP1 fetch ok", { url: response.url || SITE_DATA_URL, status: response.status });
-
-      const data = await response.json();
-      console.log("STEP2 json ok");
-      console.log("RAW data =", data);
-      console.log("sites =", data?.sites);
-      const rawSites = Array.isArray(data?.sites) ? data.sites : [];
-      if (!rawSites.length){
-        throw new Error(`${SITE_DATA_URL} does not contain any site records.`);
-      }
-
-      const nextSites = {};
-      rawSites.forEach(rawSite => {
-        const site = normalizeSiteRecord(rawSite);
-        if (!site.siteId || !site.drawings.length) return;
-        nextSites[site.siteId] = site;
-      });
-      console.log("STEP3 normalize ok", { siteIds: Object.keys(nextSites) });
-
-      if (!Object.keys(nextSites).length){
-        throw new Error(`${SITE_DATA_URL} does not contain any valid site records.`);
-      }
-
-      return nextSites;
-    }
-
-    function resolveInitialTitle(nextSites){
-      const defaultTitle = Object.keys(nextSites)[0];
-      const params = new URLSearchParams(location.search);
-      const requestedTitle = params.get("SITE") || params.get("TITLE");
-      return nextSites[requestedTitle] ? requestedTitle : defaultTitle;
-    }
-
-    function resolveInitialDrawingId(site){
-      const requestedDrawingId = new URLSearchParams(location.search).get("DRAWING");
-      const hasRequested = site.drawings.some(drawing => drawing.drawingId === requestedDrawingId);
-      if (hasRequested) return requestedDrawingId;
-      const hasDefault = site.drawings.some(drawing => drawing.drawingId === site.defaultDrawingId);
-      return hasDefault ? site.defaultDrawingId : site.drawings[0].drawingId;
-    }
-
-    function setCurrentSite(title){
-      currentTitle = title;
-      currentSite = sites[title];
+    function setCurrentSite(siteId){
+      currentSite = SiteConfig.findSiteById(sites, siteId) || sites[0];
       console.log("setCurrentSite", {
-        requestedSiteId: title,
+        requestedSiteId: siteId,
         selectedSite: currentSite
       });
     }
@@ -452,12 +379,11 @@
     }
 
     function populateSiteSelector(){
-      siteSelector.innerHTML = currentTitle
-        ? Object.values(sites).map(site => `<option value="${site.siteId}">${site.siteName}</option>`).join("")
+      siteSelector.innerHTML = currentSite
+        ? sites.map(site => `<option value="${site.siteId}">${site.siteName}</option>`).join("")
         : "";
       siteSelector.value = currentSite?.siteId || "";
       console.log("populateSiteSelector", {
-        currentTitle,
         selectedSite: currentSite,
         siteSelectorValue: siteSelector.value
       });
@@ -484,23 +410,6 @@
         window.history.replaceState(null, "", `?${params.toString()}`);
       } catch (error) {
         console.error("replaceState failed", error);
-      }
-    }
-
-    function getSharedKeyplanStorageKey(){
-      return `planner_keyplan_${currentSite.siteId}`;
-    }
-
-    function getSharedKeyplanImageSrc(){
-      try {
-        const raw = localStorage.getItem(getSharedKeyplanStorageKey());
-        if (!raw) return "";
-        const parsed = JSON.parse(raw);
-        const imageDataUrl = String(parsed?.imageDataUrl || "").trim();
-        return imageDataUrl || "";
-      } catch (error) {
-        console.error("Failed to read shared keyplan", error);
-        return "";
       }
     }
 
@@ -1127,12 +1036,13 @@
     }
 
     async function initializeApp(){
-      sites = await loadSitesData();
+      sites = await SiteConfig.loadSitesData(SITE_DATA_URL);
       console.log("initializeApp:sites-loaded", {
-        siteIds: Object.keys(sites)
+        siteIds: sites.map(site => site.siteId)
       });
-      setCurrentSite(resolveInitialTitle(sites));
-      setCurrentDrawing(resolveInitialDrawingId(currentSite));
+      const params = new URLSearchParams(location.search);
+      setCurrentSite(SiteConfig.resolveRequestedSiteId(sites, params));
+      setCurrentDrawing(SiteConfig.resolveRequestedDrawingId(currentSite, params));
       console.log("initializeApp:selected", {
         selectedSite: currentSite,
         selectedDrawing: currentDrawing,
